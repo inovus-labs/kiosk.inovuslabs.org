@@ -165,12 +165,16 @@ async function buildSlide(post, index) {
           </div>
         </div>
 
-        <div class="qr-card" style="border-color:rgba(${r},${g},${b},0.28);">
-          <img class="qr-img" src="${qr}" alt="QR code">
+        <div class="qr-card" style="border-color:rgba(${r},${g},${b},0.22);background:linear-gradient(135deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.05) 100%);">
+          <div class="qr-code-wrap">
+            <img class="qr-img" src="${qr}" alt="QR code">
+          </div>
           <div class="qr-text">
-            <div class="qr-cta">Read on your phone</div>
+            <div class="qr-kicker" style="color:${accent};">SCAN TO READ</div>
+            <div class="qr-cta">Continue this article on your phone</div>
             <div class="qr-url">blog.inovuslabs.org</div>
           </div>
+          <div class="qr-arrow" style="color:${accent};">↗</div>
         </div>
 
       </div>
