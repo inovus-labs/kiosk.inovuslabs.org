@@ -11,7 +11,6 @@ const GHOST_API_URL         = process.env.GHOST_API_URL || 'https://blog.inovusl
 const GHOST_CONTENT_API_KEY = process.env.GHOST_CONTENT_API_KEY;
 const LOGO_URL              = 'https://inovuslabs.org/assets/logo.svg';
 const POST_LIMIT            = 8;
-const CUSTOM_DOMAIN         = (process.env.CUSTOM_DOMAIN || '').trim();
 
 if (!GHOST_CONTENT_API_KEY) {
   console.error('Error: GHOST_CONTENT_API_KEY is required');
@@ -230,8 +229,10 @@ ${dotsHtml}
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
+  const ROOT_DIR = path.join(__dirname, '..');
   const SRC_DIR = path.join(__dirname, '..', 'src');
   const OUT_DIR = path.join(__dirname, '..', 'out');
+  const rootCnamePath = path.join(ROOT_DIR, 'CNAME');
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
   // Copy static assets
@@ -266,9 +267,9 @@ async function main() {
   const htmlPath = path.join(OUT_DIR, 'index.html');
   fs.writeFileSync(htmlPath, html, 'utf8');
   const cnamePath = path.join(OUT_DIR, 'CNAME');
-  if (CUSTOM_DOMAIN) {
-    fs.writeFileSync(cnamePath, `${CUSTOM_DOMAIN}\n`, 'utf8');
-    console.log(`Written out/CNAME       (${CUSTOM_DOMAIN})`);
+  if (fs.existsSync(rootCnamePath)) {
+    fs.copyFileSync(rootCnamePath, cnamePath);
+    console.log('Copied CNAME to out/');
   } else if (fs.existsSync(cnamePath)) {
     fs.unlinkSync(cnamePath);
     console.log('Removed out/CNAME');
