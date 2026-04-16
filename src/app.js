@@ -3,7 +3,7 @@ var dots   = document.querySelectorAll('.dot');
 var line   = document.getElementById('progress-line');
 var total  = slides.length;
 var cur    = 0;
-var DUR    = 9000; // ms per slide
+var DUR    = 15000; // ms per slide
 
 function setProgress(accent) {
   if (!line) return;
