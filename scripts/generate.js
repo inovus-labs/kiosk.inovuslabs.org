@@ -201,6 +201,16 @@ function buildHTML({ logoTag, slidesHtml, dotsHtml, enableSound }) {
 </head>
 <body>
 
+  <div class="screen-guard">
+    <div class="screen-guard-icon"></div>
+    <div class="screen-guard-eyebrow">Welcome to Inovus Labs - Kiosk Display</div>
+    <div class="screen-guard-title">You're on the right page, but wrong screen</div>
+    <div class="screen-guard-body">
+      This is a custom-built kiosk display designed to be displayed on a 1080 &times; 1920 TV screen in portrait orientation.
+    </div>
+    <div class="screen-guard-url">blog.inovuslabs.org</div>
+  </div>
+
   <div class="header">
     ${logoTag}
     <div class="clock" id="clock">--:--</div>

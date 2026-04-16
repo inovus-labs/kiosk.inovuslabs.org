@@ -434,6 +434,102 @@ body {
   to   { width: 100%; }
 }
 
+/* ── SCREEN GUARD (landscape / wrong orientation) ── */
+
+.screen-guard {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #0a0a0a;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px;
+  font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+  color: #fff;
+  background-image: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(108,99,255,0.07) 0%, transparent 100%);
+}
+
+@media (orientation: landscape) {
+  .screen-guard {
+    display: -webkit-flex;
+    display: flex;
+  }
+}
+
+.screen-guard-icon {
+  width: 48px;
+  height: 72px;
+  border: 2.5px solid rgba(108, 99, 255, 0.7);
+  border-radius: 10px;
+  margin: 0 auto 32px;
+  position: relative;
+}
+
+.screen-guard-icon::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: rgba(108, 99, 255, 0.5);
+  border-radius: 2px;
+}
+
+.screen-guard-icon::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(108, 99, 255, 0.45);
+}
+
+.screen-guard-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #6C63FF;
+  margin-bottom: 18px;
+}
+
+.screen-guard-title {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.screen-guard-body {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.screen-guard-url {
+  margin-top: 32px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.18);
+}
+
 /* ── EMPTY STATE ──────────────────────────────────── */
 
 .empty {
