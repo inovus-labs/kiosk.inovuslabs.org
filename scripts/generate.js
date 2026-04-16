@@ -9,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const GHOST_API_URL         = process.env.GHOST_API_URL || 'https://blog.inovuslabs.org';
 const GHOST_CONTENT_API_KEY = process.env.GHOST_CONTENT_API_KEY;
+const ENABLE_SOUND          = process.env.ENABLE_SOUND !== 'false';
 const LOGO_URL              = 'https://inovuslabs.org/assets/logo.svg';
 const POST_LIMIT            = 8;
 
@@ -188,7 +189,7 @@ function buildDots(count) {
 
 // ─── HTML shell ───────────────────────────────────────────────────────────────
 
-function buildHTML({ logoTag, slidesHtml, dotsHtml }) {
+function buildHTML({ logoTag, slidesHtml, dotsHtml, enableSound }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -220,6 +221,7 @@ ${dotsHtml}
   <div class="progress-line" id="progress-line"></div>
 
   <script src="app.js"></script>
+  ${enableSound ? '<script src="audio.js"></script>' : ''}
 
 </body>
 </html>`;
@@ -237,7 +239,10 @@ async function main() {
   // Copy static assets
   fs.copyFileSync(path.join(SRC_DIR, 'style.css'), path.join(OUT_DIR, 'style.css'));
   fs.copyFileSync(path.join(SRC_DIR, 'app.js'),    path.join(OUT_DIR, 'app.js'));
-  console.log('Copied style.css and app.js');
+  if (ENABLE_SOUND) {
+    fs.copyFileSync(path.join(SRC_DIR, 'audio.js'), path.join(OUT_DIR, 'audio.js'));
+  }
+  console.log(`Copied style.css and app.js${ENABLE_SOUND ? ' and audio.js' : ' (sound disabled)'}`);
 
   // Fetch data
   console.log('Fetching posts\u2026');
@@ -262,7 +267,7 @@ async function main() {
   }
 
   // Write HTML
-  const html     = buildHTML({ logoTag, slidesHtml, dotsHtml });
+  const html     = buildHTML({ logoTag, slidesHtml, dotsHtml, enableSound: ENABLE_SOUND });
   const htmlPath = path.join(OUT_DIR, 'index.html');
   fs.writeFileSync(htmlPath, html, 'utf8');
   const cnamePath = path.join(OUT_DIR, 'CNAME');
