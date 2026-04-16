@@ -1,7 +1,7 @@
 {
   "name": "kiosk-display",
   "version": "1.0.0",
-  "description": "Inovus Labs blog kiosk display for portrait TV (1080x1920)",
+  "description": "A custom kiosk display for Inovus Labs, designed to be displayed on a 1080x1920 TV screen in portrait orientation.",
   "type": "module",
   "engines": {
     "node": ">=18"

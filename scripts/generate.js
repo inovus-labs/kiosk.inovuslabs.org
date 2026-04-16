@@ -196,7 +196,7 @@ function buildHTML({ logoTag, slidesHtml, dotsHtml, enableSound }) {
   <meta charset="UTF-8">
   <meta http-equiv="refresh" content="1800">
   <meta name="viewport" content="width=1080, height=1920, initial-scale=1.0">
-  <title>Inovus Labs Blog</title>
+  <title>Inovus Labs Blog - Kiosk Display</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
