@@ -15,19 +15,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore posts hash cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/posts-hash.txt
+          key: posts-hash-${{ github.run_id }}
+          restore-keys: |
+            posts-hash-
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check for data changes
+        id: check
+        run: bun run scripts/check-changes.js
+        env:
+          GHOST_API_URL: https://blog.inovuslabs.org
+          GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
+          HASH_FILE: .cache/posts-hash.txt
+
       - name: Generate kiosk HTML
+        if: steps.check.outputs.changed == 'true'
         run: bun run scripts/generate.js
         env:
           GHOST_API_URL: https://blog.inovuslabs.org
           GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
 
       - name: Deploy to GitHub Pages
+        if: steps.check.outputs.changed == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
