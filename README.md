@@ -12,12 +12,11 @@ Currently showing blog posts. Built to grow.
 
 ## How it works
 
-```
- Data Sources        GitHub Actions        GitHub Pages         Portrait TV
- ────────────   ──►  ──────────────  ──►  ────────────── ──►  ─────────────
- Ghost CMS           Builds nightly        gh-pages             1080 × 1920
-                      & deploys            branch               Auto-refreshes
-                                                                every 30 min
+```mermaid
+flowchart LR
+    A[(Ghost CMS)] -->|Content API| B[GitHub Actions\nBuilds nightly]
+    B -->|Deploys to\ngh-pages branch| C[GitHub Pages]
+    C -->|Auto-refreshes\nevery 30 min| D[Portrait TV\n1080 × 1920]
 ```
 
 The workflow runs at midnight UTC every day (and on demand). It fetches content, generates a fully self-contained `index.html`, and pushes it to the `gh-pages` branch — which GitHub Pages picks up and serves.
@@ -34,15 +33,10 @@ The workflow runs at midnight UTC every day (and on demand). It fetches content,
 ## Features
 
 - Slides cycle every 10 seconds with smooth fade transitions and a progress bar. Dot indicators at the bottom track position.
-
 - Cover images slowly zoom during each slide — keeps the screen alive without being distracting.
-
 - Every slide has a scannable QR code that opens the full post on your phone, with UTM parameters for tracking.
-
 - Always-on HH:MM clock in the top-right, with a blinking separator.
-
 - Optional SomaFM radio stream running quietly in the background. Toggle with `ENABLE_SOUND`.
-
 - Any screen that isn't portrait and close to 9:16 gets a friendly overlay instead of a broken layout.
 
 
