@@ -2,7 +2,7 @@ name: Build & Deploy Kiosk
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -15,41 +15,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch previous hash from gh-pages
-        run: |
-          mkdir -p .cache
-          git fetch origin gh-pages --depth=1 2>/dev/null \
-            && git show origin/gh-pages:posts-hash.txt > .cache/posts-hash.txt 2>/dev/null \
-            || true
-
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check for data changes
-        id: check
-        run: bun run scripts/check-changes.js
-        env:
-          GHOST_API_URL: https://blog.inovuslabs.org
-          GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
-          HASH_FILE: .cache/posts-hash.txt
-
       - name: Generate kiosk HTML
-        if: steps.check.outputs.changed == 'true'
         run: bun run scripts/generate.js
         env:
           GHOST_API_URL: https://blog.inovuslabs.org
           GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
           ENABLE_SOUND: ${{ vars.ENABLE_SOUND }}
 
-      - name: Include hash in output
-        if: steps.check.outputs.changed == 'true'
-        run: cp .cache/posts-hash.txt out/posts-hash.txt
-
       - name: Deploy to GitHub Pages
-        if: steps.check.outputs.changed == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
