@@ -1,0 +1,16 @@
+{
+  "name": "kiosk-display",
+  "version": "1.0.0",
+  "description": "Inovus Labs blog kiosk display for portrait TV (1080x1920)",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "bun run scripts/generate.js",
+    "preview": "bun run scripts/generate.js && open out/index.html"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
