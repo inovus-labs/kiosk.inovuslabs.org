@@ -15,13 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore posts hash cache
-        uses: actions/cache@v4
-        with:
-          path: .cache/posts-hash.txt
-          key: posts-hash-${{ github.run_id }}
-          restore-keys: |
-            posts-hash-
+      - name: Fetch previous hash from gh-pages
+        run: |
+          mkdir -p .cache
+          git fetch origin gh-pages --depth=1 2>/dev/null \
+            && git show origin/gh-pages:posts-hash.txt > .cache/posts-hash.txt 2>/dev/null \
+            || true
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -43,6 +42,11 @@ jobs:
         env:
           GHOST_API_URL: https://blog.inovuslabs.org
           GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
+          ENABLE_SOUND: ${{ vars.ENABLE_SOUND }}
+
+      - name: Include hash in output
+        if: steps.check.outputs.changed == 'true'
+        run: cp .cache/posts-hash.txt out/posts-hash.txt
 
       - name: Deploy to GitHub Pages
         if: steps.check.outputs.changed == 'true'
