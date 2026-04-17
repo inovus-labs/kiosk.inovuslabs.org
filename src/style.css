@@ -503,6 +503,49 @@ body {
   flex-shrink: 0;
 }
 
+/* ── PODCAST WAVE ────────────────────────────────── */
+
+.podcast-wave {
+  width: 280px;
+  height: 48px;
+  margin-bottom: 28px;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+  opacity: 0.88;
+}
+
+/* ── PODCAST ARTWORK GLOW ────────────────────────── */
+
+.slide.podcast.active .podcast-artwork-wrap {
+  -webkit-animation: riseIn 0.65s 0.10s ease both, artworkGlow 4s 0.75s ease-in-out infinite alternate;
+  animation: riseIn 0.65s 0.10s ease both, artworkGlow 4s 0.75s ease-in-out infinite alternate;
+}
+
+@-webkit-keyframes artworkGlow {
+  from { -webkit-box-shadow: 0 48px 120px rgba(0,0,0,0.70), 0 0 0 1px rgba(255,255,255,0.07), 0 0 60px rgba(29,185,84,0.18); box-shadow: 0 48px 120px rgba(0,0,0,0.70), 0 0 0 1px rgba(255,255,255,0.07), 0 0 60px rgba(29,185,84,0.18); }
+  to   { -webkit-box-shadow: 0 56px 140px rgba(0,0,0,0.80), 0 0 0 1px rgba(255,255,255,0.12), 0 0 100px rgba(29,185,84,0.38); box-shadow: 0 56px 140px rgba(0,0,0,0.80), 0 0 0 1px rgba(255,255,255,0.12), 0 0 100px rgba(29,185,84,0.38); }
+}
+@keyframes artworkGlow {
+  from { box-shadow: 0 48px 120px rgba(0,0,0,0.70), 0 0 0 1px rgba(255,255,255,0.07), 0 0 60px rgba(29,185,84,0.18); }
+  to   { box-shadow: 0 56px 140px rgba(0,0,0,0.80), 0 0 0 1px rgba(255,255,255,0.12), 0 0 100px rgba(29,185,84,0.38); }
+}
+
+/* ── PODCAST BG DRIFT ────────────────────────────── */
+
+.slide.podcast.active .podcast-bg {
+  -webkit-animation: bgDrift 18s ease-in-out infinite alternate;
+  animation: bgDrift 18s ease-in-out infinite alternate;
+}
+
+@-webkit-keyframes bgDrift {
+  from { -webkit-transform: scale(1.0) translate(0px, 0px);   transform: scale(1.0) translate(0px, 0px); }
+  to   { -webkit-transform: scale(1.06) translate(-18px, 12px); transform: scale(1.06) translate(-18px, 12px); }
+}
+@keyframes bgDrift {
+  from { transform: scale(1.0) translate(0px, 0px); }
+  to   { transform: scale(1.06) translate(-18px, 12px); }
+}
+
 /* ── ENTRANCE ANIMATIONS (staggered) ─────────────── */
 
 .slide.active .tag       { -webkit-animation: riseIn 0.55s 0.06s ease both; animation: riseIn 0.55s 0.06s ease both; }
@@ -511,7 +554,7 @@ body {
 .slide.active .author-row{ -webkit-animation: riseIn 0.55s 0.40s ease both; animation: riseIn 0.55s 0.40s ease both; }
 .slide.active .qr-card   { -webkit-animation: riseIn 0.55s 0.50s ease both; animation: riseIn 0.55s 0.50s ease both; }
 
-.slide.podcast.active .podcast-artwork-wrap { -webkit-animation: riseIn 0.65s 0.10s ease both; animation: riseIn 0.65s 0.10s ease both; }
+.slide.podcast.active .podcast-wave         { -webkit-animation: riseIn 0.50s 0.20s ease both; animation: riseIn 0.50s 0.20s ease both; }
 .slide.podcast.active .podcast-eyebrow      { -webkit-animation: riseIn 0.55s 0.28s ease both; animation: riseIn 0.55s 0.28s ease both; }
 .slide.podcast.active .podcast-title        { -webkit-animation: riseIn 0.60s 0.38s ease both; animation: riseIn 0.60s 0.38s ease both; }
 .slide.podcast.active .podcast-meta         { -webkit-animation: riseIn 0.55s 0.46s ease both; animation: riseIn 0.55s 0.46s ease both; }
