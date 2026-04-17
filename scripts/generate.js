@@ -37,10 +37,17 @@ async function fetchLogo() {
 
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
-function buildDots(count) {
-  return Array.from({ length: count }, (_, i) =>
-    `      <div class="dot${i === 0 ? ' active' : ''}"></div>`
-  ).join('\n');
+function buildDots(items) {
+  let html = '';
+  let prevType = null;
+  items.forEach((item, i) => {
+    if (prevType !== null && item._type !== prevType) {
+      html += '      <div class="dot-sep"></div>\n';
+    }
+    html += `      <div class="dot dot-${item._type}${i === 0 ? ' active' : ''}"></div>\n`;
+    prevType = item._type;
+  });
+  return html;
 }
 
 function buildHTML({ logoTag, slidesHtml, dotsHtml, enableSound }) {
@@ -133,11 +140,12 @@ async function main() {
     console.log('Podcasts disabled in config.json, skipping');
   }
 
-  // Combine and sort by date (most recent first)
-  const allItems = [
-    ...posts.map(p => ({ ...p, _type: 'blog',    _date: new Date(p.published_at) })),
-    ...podcastEpisodes.map(e => ({ ...e, _type: 'podcast', _date: new Date(e.release_date) })),
-  ].sort((a, b) => b._date - a._date);
+  // Group by type (date-sorted within each group), blogs first then podcasts
+  const blogItems    = posts.map(p => ({ ...p, _type: 'blog',    _date: new Date(p.published_at) }))
+                            .sort((a, b) => b._date - a._date);
+  const podcastItems = podcastEpisodes.map(e => ({ ...e, _type: 'podcast', _date: new Date(e.release_date) }))
+                                      .sort((a, b) => b._date - a._date);
+  const allItems = [...blogItems, ...podcastItems];
 
   console.log('Fetching logo\u2026');
   const logoSrc = await fetchLogo();
@@ -157,7 +165,7 @@ async function main() {
         : buildBlogSlide(item, i)
     ));
     slidesHtml = built.join('');
-    dotsHtml   = buildDots(allItems.length);
+    dotsHtml   = buildDots(allItems);
   }
 
   // Write HTML

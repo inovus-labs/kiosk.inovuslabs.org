@@ -23,22 +23,22 @@ function goTo(n) {
   if (total === 0) return;
 
   // Deactivate current
-  slides[cur].className = 'slide';
+  slides[cur].classList.remove('active');
   if (dots[cur]) {
-    dots[cur].className    = 'dot';
-    dots[cur].style.background    = '';
-    dots[cur].style.width         = '';
-    dots[cur].style.borderRadius  = '';
+    dots[cur].classList.remove('active');
+    dots[cur].style.background   = '';
+    dots[cur].style.width        = '';
+    dots[cur].style.borderRadius = '';
   }
 
   // Advance
   cur = ((n % total) + total) % total;
 
   // Activate next
-  slides[cur].className = 'slide active';
+  slides[cur].classList.add('active');
   var accent = slides[cur].getAttribute('data-accent') || '#6C63FF';
   if (dots[cur]) {
-    dots[cur].className        = 'dot active';
+    dots[cur].classList.add('active');
     dots[cur].style.background = accent;
   }
   setProgress(accent);
