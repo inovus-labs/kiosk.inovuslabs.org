@@ -2,15 +2,15 @@
   "ghost": {
     "enable": true,
     "apiUrl": "https://blog.inovuslabs.org",
-    "postLimit": 10
+    "postLimit": 6
   },
   "podcast": {
     "enable": true,
     "rssUrl": "https://anchor.fm/s/eaa6b20c/podcast/rss",
-    "episodeLimit": 10
+    "episodeLimit": 6
   },
   "display": {
     "logoUrl": "https://inovuslabs.org/assets/logo.svg",
-    "enableSound": true
+    "enableSound": false
   }
 }
