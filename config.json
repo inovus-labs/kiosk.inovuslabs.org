@@ -1,6 +1,6 @@
 {
   "ghost": {
-    "enable": false,
+    "enable": true,
     "apiUrl": "https://blog.inovuslabs.org",
     "postLimit": 10
   },
@@ -11,6 +11,6 @@
   },
   "display": {
     "logoUrl": "https://inovuslabs.org/assets/logo.svg",
-    "enableSound": false
+    "enableSound": true
   }
 }
