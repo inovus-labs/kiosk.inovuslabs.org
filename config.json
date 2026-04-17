@@ -1,0 +1,16 @@
+{
+  "ghost": {
+    "enable": false,
+    "apiUrl": "https://blog.inovuslabs.org",
+    "postLimit": 10
+  },
+  "podcast": {
+    "enable": true,
+    "rssUrl": "https://anchor.fm/s/eaa6b20c/podcast/rss",
+    "episodeLimit": 10
+  },
+  "display": {
+    "logoUrl": "https://inovuslabs.org/assets/logo.svg",
+    "enableSound": false
+  }
+}

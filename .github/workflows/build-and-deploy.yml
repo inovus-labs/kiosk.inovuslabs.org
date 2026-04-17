@@ -24,9 +24,7 @@ jobs:
       - name: Generate kiosk HTML
         run: bun run scripts/generate.js
         env:
-          GHOST_API_URL: https://blog.inovuslabs.org
           GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
-          ENABLE_SOUND: ${{ vars.ENABLE_SOUND }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
