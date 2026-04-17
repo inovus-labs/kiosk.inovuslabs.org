@@ -126,7 +126,7 @@ export async function buildPodcastSlide(episode, show, index) {
 
         <img class="podcast-wave" src="wave.svg" alt="" aria-hidden="true">
 
-        <div class="podcast-eyebrow">Podcast</div>
+        <div class="podcast-eyebrow">Podcast on Spotify</div>
         <h1 class="podcast-title${titleMl ? ' lang-ml' : ''}">${title}</h1>
         <div class="podcast-meta">${showName}&nbsp;&nbsp;&middot;&nbsp;&nbsp;${duration}&nbsp;listen&nbsp;&nbsp;&middot;&nbsp;&nbsp;${dateStr}</div>
 

@@ -450,8 +450,8 @@ body {
   margin-bottom: 28px;
   -webkit-flex-shrink: 0;
   flex-shrink: 0;
-  -webkit-box-shadow: 0 0 0 1px rgba(29,185,84,0.4), 0 8px 32px rgba(29,185,84,0.35);
-  box-shadow: 0 0 0 1px rgba(29,185,84,0.4), 0 8px 32px rgba(29,185,84,0.35);
+  -webkit-box-shadow: 0 0 0 1px rgba(29,185,84,0.25), 0 4px 16px rgba(29,185,84,0.15);
+  box-shadow: 0 0 0 1px rgba(29,185,84,0.25), 0 4px 16px rgba(29,185,84,0.15);
 }
 
 .podcast-eyebrow::before {
