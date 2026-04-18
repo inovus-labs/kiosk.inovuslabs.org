@@ -398,7 +398,7 @@ body {
 .progress-line {
   position: absolute;
   bottom: 0; left: 0;
-  height: 8px;
+  height: 3px;
   width: 0;
   z-index: 100;
   background: #6C63FF;
@@ -408,9 +408,9 @@ body {
 
 .podcast-bg {
   position: absolute;
-  top: -60px; right: -60px; bottom: -60px; left: -60px;
-  width: calc(100% + 120px);
-  height: calc(100% + 120px);
+  top: -60px; right: -60px; bottom: 0px; left: -60px;
+  width: calc(100%);
+  height: calc(100%);
   background-size: cover;
   background-position: center;
   -webkit-filter: blur(72px) brightness(0.28) saturate(2);
