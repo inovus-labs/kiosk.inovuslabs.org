@@ -8,11 +8,11 @@ var DUR    = 10000; // ms per slide
 function setProgress(accent) {
   if (!line) return;
   line.style.cssText =
-    'position:absolute;bottom:0;left:0;height:3px;width:0;z-index:100;' +
+    'position:absolute;bottom:4px;left:0;height:3px;width:0;z-index:100;' +
     'background:' + accent + ';-webkit-animation:none;animation:none;';
   setTimeout(function () {
     line.style.cssText =
-      'position:absolute;bottom:0;left:0;height:3px;width:0;z-index:100;' +
+      'position:absolute;bottom:4px;left:0;height:3px;width:0;z-index:100;' +
       'background:' + accent + ';' +
       '-webkit-animation:progressLine ' + DUR + 'ms linear forwards;' +
       'animation:progressLine ' + DUR + 'ms linear forwards;';
