@@ -12,7 +12,7 @@ function startAudio() {
   var idx   = block % stations.length;
 
   var audio    = new Audio();
-  audio.volume = 0.3;
+  audio.volume = 1.0;
 
   function tryPlay(i) {
     idx = ((i % stations.length) + stations.length) % stations.length;

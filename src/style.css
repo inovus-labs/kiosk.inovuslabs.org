@@ -408,7 +408,9 @@ body {
 
 .podcast-bg {
   position: absolute;
-  inset: -60px;
+  top: -60px; right: -60px; bottom: -60px; left: -60px;
+  width: calc(100% + 120px);
+  height: calc(100% + 120px);
   background-size: cover;
   background-position: center;
   -webkit-filter: blur(72px) brightness(0.28) saturate(2);
