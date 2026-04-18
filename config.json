@@ -11,6 +11,6 @@
   },
   "display": {
     "logoUrl": "https://inovuslabs.org/assets/logo.svg",
-    "enableSound": false
+    "enableSound": true
   }
 }
