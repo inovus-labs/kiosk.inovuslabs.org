@@ -375,7 +375,7 @@ body {
   transition: width 0.35s ease, background 0.35s ease, border-radius 0.35s ease;
 }
 
-.dot-podcast { background: rgba(29, 185, 84, 0.35); }
+.dot-podcast   { background: rgba(29, 185, 84, 0.35); }
 
 .dot-sep {
   width: 2px;
@@ -472,8 +472,8 @@ body {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  margin-left: 12px;
   background: #fff;
+  margin-right: 10px;
   -webkit-flex-shrink: 0;
   flex-shrink: 0;
   -webkit-animation: podcastPulse 1.8s ease-in-out infinite;
