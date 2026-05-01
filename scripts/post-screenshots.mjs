@@ -91,25 +91,29 @@ async function postToDiscord(png, manifest) {
   const runUrl = (repo && runId)
     ? `https://github.com/${repo}/actions/runs/${runId}`
     : KIOSK_URL;
-  const footerText = KIOSK_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const host = KIOSK_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const footerText = `${host} · build #${RUN_NUMBER}`;
 
   const description =
-    `**[Open kiosk](${KIOSK_URL})** — portrait **1080×1920**. ` +
-    `Preview: **newest blog slide** (index **0**, newest first in the carousel).`;
+    `Save and post — **1080×1920** portrait, sized for **Instagram stories** and **WhatsApp status**. ` +
+    `Same visual now showing on our **[college lobby kiosk](${KIOSK_URL})**.`;
 
   const embed = {
-    title: 'Kiosk deploy · screenshot ready',
+    title: 'Story-ready · new blog post',
     url: KIOSK_URL,
     description,
     color: 903920,
     fields: [
-      { name: 'Build', value: `**#${RUN_NUMBER}**`, inline: true },
       {
-        name: 'On the kiosk now',
+        name: 'On the kiosk',
         value: `**${manifest.slideCount}** slides · **${manifest.blogCount}** blog · **${manifest.podcastCount}** podcast`,
         inline: true,
       },
-      { name: 'Workflow', value: `[Run logs & job summary](${runUrl})`, inline: false },
+      {
+        name: 'Build',
+        value: `**#${RUN_NUMBER}** · [run logs](${runUrl})`,
+        inline: true,
+      },
     ],
     image: { url: 'attachment://slide.png' },
     footer: { text: footerText },
