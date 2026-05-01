@@ -1,5 +1,5 @@
-// Captures one PNG per blog slide via Cloudflare Browser Rendering REST,
-// then posts all PNGs to a Discord webhook in a single multipart message.
+// Captures the newest blog slide (index 0) via Cloudflare Browser Rendering REST,
+// then posts it to a Discord webhook as a rich embed with the PNG attached.
 // Runs after `Deploy to GitHub Pages`. Must never fail the deploy: any error → exit 0.
 
 const {
@@ -85,19 +85,59 @@ async function captureSlide(i) {
   return null;
 }
 
-async function postToDiscord(pngs) {
+async function postToDiscord(png, manifest) {
+  const repo = process.env.GITHUB_REPOSITORY;
+  const runId = process.env.GITHUB_RUN_ID;
+  const runUrl = (repo && runId)
+    ? `https://github.com/${repo}/actions/runs/${runId}`
+    : KIOSK_URL;
+  const footerText = KIOSK_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  const description =
+    `**[Open kiosk](${KIOSK_URL})** — portrait **1080×1920**. ` +
+    `Preview: **newest blog slide** (index **0**, newest first in the carousel).`;
+
+  const embed = {
+    title: 'Kiosk deploy · screenshot ready',
+    url: KIOSK_URL,
+    description,
+    color: 903920,
+    author: { name: 'GitHub Actions', url: runUrl },
+    fields: [
+      { name: 'Build', value: `**#${RUN_NUMBER}**`, inline: true },
+      {
+        name: 'On the kiosk now',
+        value: `**${manifest.slideCount}** slides · **${manifest.blogCount}** blog · **${manifest.podcastCount}** podcast`,
+        inline: true,
+      },
+      {
+        name: 'Screenshot',
+        value: '**1** PNG · live site capture · Cloudflare Browser Rendering → Discord',
+        inline: false,
+      },
+      { name: 'Workflow', value: `[Run logs & job summary](${runUrl})`, inline: false },
+    ],
+    image: { url: 'attachment://slide-1.png' },
+    footer: { text: footerText },
+    timestamp: new Date().toISOString(),
+  };
+
+  const payload = {
+    username: 'Kiosk Build',
+    embeds: [embed],
+  };
+
   const form = new FormData();
-  form.append('payload_json', JSON.stringify({ username: 'Kiosk Build' }));
-  pngs.forEach((buf, i) => {
-    form.append(`files[${i}]`, new Blob([buf], { type: 'image/png' }), `slide-${i + 1}.png`);
-  });
+  form.append('payload_json', JSON.stringify(payload));
+  form.append('files[0]', new Blob([png], { type: 'image/png' }), 'slide-1.png');
+
   const res = await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: form });
   if (!res.ok) {
     warn(`Discord POST failed: ${res.status} ${res.statusText}`);
     try { warn(`body: ${(await res.text()).slice(0, 400)}`); } catch {}
     return;
   }
-  info(`posted ${pngs.length} slide(s) to Discord (status ${res.status})`);
+  info(`posted screenshot to Discord (status ${res.status})`);
 }
 
 async function main() {
@@ -114,20 +154,14 @@ async function main() {
     info('blogCount=0; nothing to screenshot');
     return;
   }
-  const cap = Math.min(blogCount, 10);
-  if (blogCount > 10) info(`blogCount=${blogCount} > 10; capping to first 10 (Discord limit)`);
 
-  const pngs = [];
-  for (let i = 0; i < cap; i++) {
-    info(`capturing slide ${i + 1}/${cap}…`);
-    const buf = await captureSlide(i);
-    if (buf) pngs.push(buf);
-  }
-  if (pngs.length === 0) {
-    warn('no screenshots captured; nothing to post');
+  info('capturing slide 0 (newest blog)…');
+  const png = await captureSlide(0);
+  if (!png) {
+    warn('no screenshot captured; nothing to post');
     return;
   }
-  await postToDiscord(pngs);
+  await postToDiscord(png, manifest);
 }
 
 main().catch(e => {
