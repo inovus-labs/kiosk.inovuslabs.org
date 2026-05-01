@@ -14,7 +14,7 @@ A purpose-built portrait kiosk running on a 1080 × 1920 TV screen at Inovus Lab
 flowchart TD
     %% ── Sources ─────────────────────────────────
     A[(Ghost CMS)]:::source
-    E[(Podcast RSS)]:::source
+    E[(Podcast RSS feed)]:::source
 
     %% ── Build & deploy pipeline ─────────────────
     W[Cloudflare Worker]:::cf
@@ -28,7 +28,7 @@ flowchart TD
 
     A -->|Webhook| W
     W -->|repository_dispatch| B
-    E -->|Anchor FM| B
+    E -->|Spotify for Podcasters| B
     B -->|Deploys to gh-pages| C
     C -->|Auto-refresh every 30 min| D
 
@@ -53,7 +53,7 @@ The workflow can also be run manually via `workflow_dispatch`.
 | Content | Source | Status |
 |---|---|---|
 | Blog posts | Ghost CMS | ✅ Live |
-| Podcast episodes | Anchor FM RSS | ✅ Live |
+| Podcast episodes | Spotify for Podcasters - RSS feed | ✅ Live |
 
 
 ## Features
@@ -84,12 +84,12 @@ Set your Ghost API key as an environment variable:
 export GHOST_CONTENT_API_KEY=your_key_here
 ```
 
-All other settings — Ghost URL, podcast RSS feed, item limits, sound — are configured in [`config.json`](config.json):
+All other settings — Ghost URL, podcast RSS feed (from **Spotify for Podcasters** → Settings → Distribution), item limits, sound — are configured in [`config.json`](config.json):
 
 ```json
 {
   "ghost":   { "enable": true, "apiUrl": "https://blog.inovuslabs.org", "postLimit": 6 },
-  "podcast": { "enable": true, "rssUrl": "https://anchor.fm/s/.../podcast/rss", "episodeLimit": 6 },
+  "podcast": { "enable": true, "rssUrl": "https://.../podcast/rss", "episodeLimit": 6 },
   "display": { "logoUrl": "https://inovuslabs.org/assets/logo.svg", "enableSound": true }
 }
 ```
