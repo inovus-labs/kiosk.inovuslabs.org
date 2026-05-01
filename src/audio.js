@@ -1,7 +1,7 @@
 function startAudio() {
   // Skip audio in screenshot mode: a live MP3 stream keeps the network
   // perpetually busy and prevents Cloudflare Browser Rendering from settling.
-  if (/[?&]screenshot=/.test(location.search)) return;
+  if (/[?&]screenshot=\d+/.test(location.search)) return;
 
   var stations = [
     'https://ice1.somafm.com/deepspaceone-128-mp3',

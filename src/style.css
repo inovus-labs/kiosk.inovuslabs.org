@@ -47,6 +47,35 @@ body {
   pointer-events: none;
 }
 
+html.screenshot-mode .header {
+  padding-top: 112px;
+}
+
+html.screenshot-mode *,
+html.screenshot-mode *::before,
+html.screenshot-mode *::after {
+  -webkit-animation: none !important;
+  animation: none !important;
+  -webkit-transition: none !important;
+  transition: none !important;
+}
+
+html.screenshot-mode .slide.active .tag,
+html.screenshot-mode .slide.active .title,
+html.screenshot-mode .slide.active .excerpt,
+html.screenshot-mode .slide.active .author-row,
+html.screenshot-mode .slide.active .qr-card,
+html.screenshot-mode .slide.podcast.active .podcast-wave,
+html.screenshot-mode .slide.podcast.active .podcast-eyebrow,
+html.screenshot-mode .slide.podcast.active .podcast-title,
+html.screenshot-mode .slide.podcast.active .podcast-meta,
+html.screenshot-mode .slide.podcast.active .qr-card,
+html.screenshot-mode .slide.podcast.active .podcast-artwork-wrap {
+  opacity: 1;
+  -webkit-transform: none;
+  transform: none;
+}
+
 .logo {
   height: 70px;
   width: auto;
@@ -124,6 +153,13 @@ body {
 .slide.active .cover {
   -webkit-animation: kenBurns 11s ease-in-out forwards;
   animation: kenBurns 11s ease-in-out forwards;
+}
+
+html.screenshot-mode .slide.active .cover {
+  -webkit-animation: none;
+  animation: none;
+  -webkit-transform: scale(1) translate(0, 0);
+  transform: scale(1) translate(0, 0);
 }
 
 /* Cinematic overlay — open at top, fully opaque by the image edge (1280px = 66.7%) */
@@ -549,6 +585,13 @@ body {
 .slide.podcast.active .podcast-bg {
   -webkit-animation: bgDrift 18s ease-in-out infinite alternate;
   animation: bgDrift 18s ease-in-out infinite alternate;
+}
+
+html.screenshot-mode .slide.podcast.active .podcast-bg {
+  -webkit-animation: none;
+  animation: none;
+  -webkit-transform: scale(1) translate(0, 0);
+  transform: scale(1) translate(0, 0);
 }
 
 @-webkit-keyframes bgDrift {

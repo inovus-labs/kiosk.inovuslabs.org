@@ -59,6 +59,7 @@ function buildHTML({ logoTag, slidesHtml, dotsHtml, enableSound }) {
   <meta name="viewport" content="width=1080, height=1920, initial-scale=1.0">
   <title>Inovus Labs - Kiosk Display</title>
   <link rel="stylesheet" href="style.css">
+  <script>document.documentElement.classList.toggle('screenshot-mode', /[?&]screenshot=(\\d+)/.test(location.search));</script>
 </head>
 <body>
 
@@ -109,11 +110,12 @@ async function main() {
   // Copy static assets
   fs.copyFileSync(path.join(SRC_DIR, 'style.css'), path.join(OUT_DIR, 'style.css'));
   fs.copyFileSync(path.join(SRC_DIR, 'app.js'),    path.join(OUT_DIR, 'app.js'));
-  fs.copyFileSync(path.join(SRC_DIR, 'wave.svg'),  path.join(OUT_DIR, 'wave.svg'));
+  fs.copyFileSync(path.join(SRC_DIR, 'wave.svg'),        path.join(OUT_DIR, 'wave.svg'));
+  fs.copyFileSync(path.join(SRC_DIR, 'wave-static.svg'), path.join(OUT_DIR, 'wave-static.svg'));
   if (ENABLE_SOUND) {
     fs.copyFileSync(path.join(SRC_DIR, 'audio.js'), path.join(OUT_DIR, 'audio.js'));
   }
-  console.log(`Copied style.css, app.js, wave.svg${ENABLE_SOUND ? ' and audio.js' : ' (sound disabled)'}`);
+  console.log(`Copied style.css, app.js, wave.svg, wave-static.svg${ENABLE_SOUND ? ' and audio.js' : ' (sound disabled)'}`);
 
   // Fetch blog posts
   let posts = [];
