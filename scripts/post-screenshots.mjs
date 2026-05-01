@@ -102,7 +102,6 @@ async function postToDiscord(png, manifest) {
     url: KIOSK_URL,
     description,
     color: 903920,
-    author: { name: 'GitHub Actions', url: runUrl },
     fields: [
       { name: 'Build', value: `**#${RUN_NUMBER}**`, inline: true },
       {
@@ -110,26 +109,21 @@ async function postToDiscord(png, manifest) {
         value: `**${manifest.slideCount}** slides · **${manifest.blogCount}** blog · **${manifest.podcastCount}** podcast`,
         inline: true,
       },
-      {
-        name: 'Screenshot',
-        value: '**1** PNG · live site capture · Cloudflare Browser Rendering → Discord',
-        inline: false,
-      },
       { name: 'Workflow', value: `[Run logs & job summary](${runUrl})`, inline: false },
     ],
-    image: { url: 'attachment://slide-1.png' },
+    image: { url: 'attachment://slide.png' },
     footer: { text: footerText },
     timestamp: new Date().toISOString(),
   };
 
   const payload = {
-    username: 'Kiosk Build',
+    username: 'Kiosk Bot',
     embeds: [embed],
   };
 
   const form = new FormData();
   form.append('payload_json', JSON.stringify(payload));
-  form.append('files[0]', new Blob([png], { type: 'image/png' }), 'slide-1.png');
+  form.append('files[0]', new Blob([png], { type: 'image/png' }), 'slide.png');
 
   const res = await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: form });
   if (!res.ok) {
