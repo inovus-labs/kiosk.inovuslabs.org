@@ -1,0 +1,11 @@
+name = "kiosk-ghost-webhook"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+GITHUB_REPO = "inovus-labs/kiosk.inovuslabs.org"
+DISPATCH_EVENT_TYPE = "ghost-publish"
+
+# Secrets (set via `wrangler secret put`):
+#   GH_TOKEN         GitHub fine-grained PAT, scoped to this repo, Contents: write
+#   WEBHOOK_SECRET   Random string; same value goes into Ghost webhook URL as ?token=

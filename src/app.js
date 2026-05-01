@@ -1,3 +1,6 @@
+var SCREENSHOT_MATCH = location.search.match(/[?&]screenshot=(\d+)/);
+var SCREENSHOT_INDEX = SCREENSHOT_MATCH ? parseInt(SCREENSHOT_MATCH[1], 10) : -1;
+
 var slides = document.querySelectorAll('.slide');
 var dots   = document.querySelectorAll('.dot');
 var line   = document.getElementById('progress-line');
@@ -45,8 +48,13 @@ function goTo(n) {
 }
 
 // Boot
-goTo(0);
-setInterval(function () { goTo(cur + 1); }, DUR);
+if (SCREENSHOT_INDEX >= 0) {
+  goTo(SCREENSHOT_INDEX);
+  if (line) line.style.display = 'none';
+} else {
+  goTo(0);
+  setInterval(function () { goTo(cur + 1); }, DUR);
+}
 
 // Live clock — HH:MM with blinking separator
 function tick() {

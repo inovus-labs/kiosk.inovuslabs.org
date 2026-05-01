@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [ghost-publish]
+
+concurrency:
+  group: build-deploy
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -25,6 +31,7 @@ jobs:
         run: bun run scripts/generate.js
         env:
           GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
+          RUN_NUMBER: ${{ github.run_number }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -33,3 +40,12 @@ jobs:
           publish_dir: ./out
           force_orphan: true
           commit_message: 'deploy: refresh kiosk [${{ github.run_number }}]'
+
+      - name: Post slide screenshots to Discord
+        run: node scripts/post-screenshots.mjs
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_NUMBER: ${{ github.run_number }}
+        continue-on-error: true

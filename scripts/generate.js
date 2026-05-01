@@ -173,6 +173,16 @@ async function main() {
   const htmlPath = path.join(OUT_DIR, 'index.html');
   fs.writeFileSync(htmlPath, html, 'utf8');
 
+  // Write build manifest (consumed by post-deploy screenshot step to know slide counts and confirm propagation)
+  const buildId = process.env.RUN_NUMBER || String(Date.now());
+  const manifest = {
+    blogCount: blogItems.length,
+    podcastCount: podcastItems.length,
+    slideCount: allItems.length,
+    buildId,
+  };
+  fs.writeFileSync(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest));
+
   const rootCnamePath = path.join(ROOT_DIR, 'CNAME');
   const outCnamePath  = path.join(OUT_DIR,  'CNAME');
   if (fs.existsSync(rootCnamePath)) {
