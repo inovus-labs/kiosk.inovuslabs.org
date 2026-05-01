@@ -48,7 +48,11 @@ body {
 }
 
 html.screenshot-mode .header {
-  padding-top: 112px;
+  padding-top: 152px;
+}
+
+html.screenshot-mode .logo {
+  height: 96px;
 }
 
 html.screenshot-mode *,
