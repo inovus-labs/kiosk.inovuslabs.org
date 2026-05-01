@@ -2,6 +2,7 @@
   "name": "kiosk-ghost-webhook",
   "private": true,
   "scripts": {
+    "build": "echo 'no build step required for plain JS Worker'",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail"
