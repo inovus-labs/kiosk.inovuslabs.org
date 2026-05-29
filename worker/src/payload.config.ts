@@ -28,6 +28,8 @@ export default buildConfig({
     importMap: { baseDir: dirname },
   },
   collections: [Users, Media, Slides],
+  graphQL: { disable: true },
+  telemetry: false,
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
   db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),

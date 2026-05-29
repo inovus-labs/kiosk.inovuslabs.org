@@ -5,7 +5,8 @@ import { fireRepositoryDispatch, type DispatchEnv } from '../../../../lib/github
 
 export const dynamic = 'force-dynamic'
 
-const WINDOW_MS = 75_000
+// Hourly cron + 5 min grace for jitter / clock skew.
+const WINDOW_MS = 65 * 60_000
 
 export async function POST(request: Request): Promise<Response> {
   const { env } = getCloudflareContext()

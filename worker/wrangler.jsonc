@@ -14,7 +14,13 @@
     },
   ],
   "r2_buckets": [{ "binding": "R2", "bucket_name": "kiosk-media" }],
-  "triggers": { "crons": ["* * * * *"] },
+  "triggers": { "crons": ["0 * * * *"] },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
   "vars": {
     "GITHUB_REPO": "inovus-labs/kiosk.inovuslabs.org",
     "DISPATCH_EVENT_TYPE": "ghost-publish",
