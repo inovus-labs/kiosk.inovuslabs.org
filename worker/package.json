@@ -5,8 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "bun run migrate && opennextjs-cloudflare build",
-    "deploy": "bun run build && opennextjs-cloudflare deploy",
+    "build": "NODE_OPTIONS='--no-deprecation --max-old-space-size=8000' next build",
+    "deploy": "bun run migrate && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "dev": "next dev",
     "migrate": "NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate",
     "generate:importmap": "payload generate:importmap",
