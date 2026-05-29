@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "worker-entry.js",
+  "name": "kiosk-worker",
+  "compatibility_date": "2025-08-15",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "D1",
+      "database_id": "ae469523-0116-44e3-8e0d-f44dd65643f7",
+      "database_name": "kiosk-db",
+      "remote": true,
+    },
+  ],
+  "r2_buckets": [{ "binding": "R2", "bucket_name": "kiosk-media" }],
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "GITHUB_REPO": "inovus-labs/kiosk.inovuslabs.org",
+    "DISPATCH_EVENT_TYPE": "ghost-publish",
+    "R2_PUBLIC_URL": "https://pub-77a1411467244045b5ccd243ce6c401f.r2.dev",
+  },
+  // Secrets via `wrangler secret put`: PAYLOAD_SECRET, WEBHOOK_SECRET, GH_TOKEN
+}
