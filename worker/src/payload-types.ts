@@ -164,37 +164,19 @@ export interface Media {
   height?: number | null;
 }
 /**
- * Custom kiosk slides (image posters and text-message billboards). Prepend to blog/podcast slides in the order shown.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "slides".
  */
 export interface Slide {
   id: number;
-  title: string;
   type: 'text' | 'image';
-  /**
-   * Optional body text shown below the headline. Keep short — kiosk is viewed from across the lobby.
-   */
+  title?: string | null;
   body?: string | null;
-  /**
-   * Portrait image at 1080×1920 looks best. Smaller images are upscaled.
-   */
   media?: (number | null) | Media;
-  /**
-   * Hex color used for billboard background and dot indicator. Example: #FF4D6D
-   */
-  accent?: string | null;
-  /**
-   * Slide goes live at or after this time. Defaults to now.
-   */
   publishAt: string;
-  /**
-   * Optional. Slide disappears after this time.
-   */
   expiresAt?: string | null;
   /**
-   * Optional manual sort key (lower = first). Leave empty for newest-first.
+   * Lower = shown first. Leave empty for newest-first.
    */
   pinnedOrder?: number | null;
   status: 'draft' | 'published';
@@ -325,11 +307,10 @@ export interface MediaSelect<T extends boolean = true> {
  * via the `definition` "slides_select".
  */
 export interface SlidesSelect<T extends boolean = true> {
-  title?: T;
   type?: T;
+  title?: T;
   body?: T;
   media?: T;
-  accent?: T;
   publishAt?: T;
   expiresAt?: T;
   pinnedOrder?: T;

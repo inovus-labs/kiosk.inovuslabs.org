@@ -5,9 +5,7 @@ export const Slides: CollectionConfig = {
   slug: 'slides',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'type', 'status', 'publishAt', 'expiresAt'],
-    description:
-      'Custom kiosk slides (image posters and text-message billboards). Prepend to blog/podcast slides in the order shown.',
+    defaultColumns: ['title', 'type', 'status', 'publishAt', 'expiresAt', 'pinnedOrder'],
   },
   access: {
     read: ({ req }) => {
@@ -37,69 +35,47 @@ export const Slides: CollectionConfig = {
   },
   fields: [
     {
-      name: 'title',
-      type: 'text',
-      required: true,
-    },
-    {
       name: 'type',
       type: 'select',
       required: true,
       defaultValue: 'text',
       options: [
-        { label: 'Text message (billboard)', value: 'text' },
-        { label: 'Image (edge-to-edge poster)', value: 'image' },
+        { label: 'Text', value: 'text' },
+        { label: 'Image', value: 'image' },
       ],
+    },
+    {
+      name: 'title',
+      type: 'text',
+      admin: { condition: (data) => data?.type === 'text' },
     },
     {
       name: 'body',
       type: 'textarea',
-      admin: {
-        condition: (data) => data?.type === 'text',
-        description: 'Optional body text shown below the headline. Keep short — kiosk is viewed from across the lobby.',
-      },
+      admin: { condition: (data) => data?.type === 'text' },
     },
     {
       name: 'media',
       type: 'upload',
       relationTo: 'media',
-      admin: {
-        condition: (data) => data?.type === 'image',
-        description: 'Portrait image at 1080×1920 looks best. Smaller images are upscaled.',
-      },
-    },
-    {
-      name: 'accent',
-      type: 'text',
-      defaultValue: '#6C63FF',
-      admin: {
-        description: 'Hex color used for billboard background and dot indicator. Example: #FF4D6D',
-      },
+      admin: { condition: (data) => data?.type === 'image' },
     },
     {
       name: 'publishAt',
       type: 'date',
       required: true,
       defaultValue: () => new Date(),
-      admin: {
-        date: { pickerAppearance: 'dayAndTime' },
-        description: 'Slide goes live at or after this time. Defaults to now.',
-      },
+      admin: { date: { pickerAppearance: 'dayAndTime' } },
     },
     {
       name: 'expiresAt',
       type: 'date',
-      admin: {
-        date: { pickerAppearance: 'dayAndTime' },
-        description: 'Optional. Slide disappears after this time.',
-      },
+      admin: { date: { pickerAppearance: 'dayAndTime' } },
     },
     {
       name: 'pinnedOrder',
       type: 'number',
-      admin: {
-        description: 'Optional manual sort key (lower = first). Leave empty for newest-first.',
-      },
+      admin: { description: 'Lower = shown first. Leave empty for newest-first.' },
     },
     {
       name: 'status',
