@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
@@ -12,7 +13,9 @@ import { Slides } from './collections/Slides'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const isProduction = process.env.NODE_ENV === 'production'
-const isCLI = process.argv[1]?.endsWith('/payload/bin.js') ?? false
+
+const realpath = (v: string) => (fs.existsSync(v) ? fs.realpathSync(v) : v)
+const isCLI = process.argv.some((v) => realpath(v ?? '').endsWith(path.join('payload', 'bin.js')))
 
 const cloudflare =
   isCLI || !isProduction
