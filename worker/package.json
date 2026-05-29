@@ -1,13 +1,42 @@
 {
-  "name": "kiosk-ghost-webhook",
-  "private": true,
+  "name": "kiosk-worker",
+  "version": "1.0.0",
+  "description": "Kiosk CMS (Payload on Cloudflare Workers) + Ghost webhook bridge for kiosk.inovuslabs.org",
+  "license": "MIT",
+  "type": "module",
   "scripts": {
-    "build": "echo 'no build step required for plain JS Worker'",
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "deploy": "bun run deploy:database && bun run deploy:app",
+    "deploy:app": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy:database": "NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate",
+    "dev": "next dev",
+    "generate:importmap": "payload generate:importmap",
+    "generate:types": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts && payload generate:types",
+    "payload": "payload"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.11.0",
+    "@payloadcms/db-d1-sqlite": "3.82.1",
+    "@payloadcms/next": "3.82.1",
+    "@payloadcms/storage-r2": "3.82.1",
+    "@payloadcms/ui": "3.82.1",
+    "next": "15.4.11",
+    "payload": "3.82.1",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
-  }
+    "@types/node": "24.12.3",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.3",
+    "wrangler": "~4.61.1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "trustedDependencies": [
+    "sharp",
+    "esbuild",
+    "unrs-resolver"
+  ]
 }

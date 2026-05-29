@@ -1,4 +1,9 @@
 {
+  "cms": {
+    "enable": true,
+    "apiUrl": "",
+    "limit": 10
+  },
   "ghost": {
     "enable": true,
     "apiUrl": "https://blog.inovuslabs.org",
