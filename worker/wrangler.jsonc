@@ -23,7 +23,8 @@
   },
   "vars": {
     "GITHUB_REPO": "inovus-labs/kiosk.inovuslabs.org",
-    "DISPATCH_EVENT_TYPE": "ghost-publish",
+    "GHOST_DISPATCH_EVENT_TYPE": "ghost-publish",
+    "CMS_DISPATCH_EVENT_TYPE": "cms-publish",
     "R2_PUBLIC_URL": "https://pub-77a1411467244045b5ccd243ce6c401f.r2.dev",
   },
   // Secrets via `wrangler secret put`: PAYLOAD_SECRET, WEBHOOK_SECRET, GH_TOKEN

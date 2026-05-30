@@ -1,6 +1,5 @@
 export type DispatchEnv = {
   GITHUB_REPO: string
-  DISPATCH_EVENT_TYPE: string
   GH_TOKEN: string
 }
 
@@ -8,6 +7,7 @@ export type DispatchClientPayload = Record<string, unknown> | undefined
 
 export async function fireRepositoryDispatch(
   env: DispatchEnv,
+  eventType: string,
   clientPayload?: DispatchClientPayload,
 ): Promise<Response> {
   const url = `https://api.github.com/repos/${env.GITHUB_REPO}/dispatches`
@@ -20,7 +20,7 @@ export async function fireRepositoryDispatch(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      event_type: env.DISPATCH_EVENT_TYPE,
+      event_type: eventType,
       client_payload: clientPayload ?? {},
     }),
   })

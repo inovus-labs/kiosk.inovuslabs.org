@@ -23,7 +23,8 @@ function shouldFireOnChange(doc: SlideDoc, previousDoc?: SlideDoc): boolean {
 
 async function dispatch(eventDetail: string, title?: string): Promise<void> {
   const { env } = getCloudflareContext()
-  await fireRepositoryDispatch(env as unknown as DispatchEnv, {
+  const dispatchEnv = env as unknown as DispatchEnv & { CMS_DISPATCH_EVENT_TYPE: string }
+  await fireRepositoryDispatch(dispatchEnv, dispatchEnv.CMS_DISPATCH_EVENT_TYPE, {
     source: 'payload',
     event: eventDetail,
     title,

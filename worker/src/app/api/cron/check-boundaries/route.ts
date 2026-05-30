@@ -10,7 +10,10 @@ const WINDOW_MS = 65 * 60_000
 
 export async function POST(request: Request): Promise<Response> {
   const { env } = getCloudflareContext()
-  const dispatchEnv = env as unknown as DispatchEnv & { WEBHOOK_SECRET: string }
+  const dispatchEnv = env as unknown as DispatchEnv & {
+    WEBHOOK_SECRET: string
+    CMS_DISPATCH_EVENT_TYPE: string
+  }
 
   if (request.headers.get('x-cron-secret') !== dispatchEnv.WEBHOOK_SECRET) {
     return new NextResponse('forbidden', { status: 403 })
@@ -24,7 +27,11 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ ok: true, dispatched: false })
   }
 
-  const ghRes = await fireRepositoryDispatch(dispatchEnv, { source: 'cron-boundary' })
+  const ghRes = await fireRepositoryDispatch(
+    dispatchEnv,
+    dispatchEnv.CMS_DISPATCH_EVENT_TYPE,
+    { source: 'cron-boundary' },
+  )
   if (!ghRes.ok) {
     const detail = await ghRes.text().catch(() => '')
     console.error(

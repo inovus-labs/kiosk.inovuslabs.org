@@ -10,7 +10,10 @@ export async function GET(): Promise<Response> {
 
 export async function POST(request: Request): Promise<Response> {
   const { env } = getCloudflareContext()
-  const dispatchEnv = env as unknown as DispatchEnv & { WEBHOOK_SECRET: string }
+  const dispatchEnv = env as unknown as DispatchEnv & {
+    WEBHOOK_SECRET: string
+    GHOST_DISPATCH_EVENT_TYPE: string
+  }
 
   const url = new URL(request.url)
   if (url.searchParams.get('token') !== dispatchEnv.WEBHOOK_SECRET) {
@@ -19,7 +22,11 @@ export async function POST(request: Request): Promise<Response> {
 
   const ghostEvent = request.headers.get('X-Ghost-Event') || 'unknown'
 
-  const ghRes = await fireRepositoryDispatch(dispatchEnv, { ghost_event: ghostEvent })
+  const ghRes = await fireRepositoryDispatch(
+    dispatchEnv,
+    dispatchEnv.GHOST_DISPATCH_EVENT_TYPE,
+    { ghost_event: ghostEvent },
+  )
 
   if (!ghRes.ok) {
     const detail = await ghRes.text().catch(() => '')
