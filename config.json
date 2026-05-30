@@ -2,17 +2,17 @@
   "cms": {
     "enable": true,
     "apiUrl": "https://kiosk-worker.inovustv.workers.dev",
-    "limit": 10
+    "limit": 5
   },
   "ghost": {
     "enable": true,
     "apiUrl": "https://blog.inovuslabs.org",
-    "postLimit": 6
+    "postLimit": 2
   },
   "podcast": {
     "enable": true,
     "rssUrl": "https://anchor.fm/s/eaa6b20c/podcast/rss",
-    "episodeLimit": 6
+    "episodeLimit": 2
   },
   "display": {
     "logoUrl": "https://inovuslabs.org/assets/logo.svg",
