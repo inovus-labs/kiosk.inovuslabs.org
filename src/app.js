@@ -6,9 +6,18 @@ var dots   = document.querySelectorAll('.dot');
 var line   = document.getElementById('progress-line');
 var total  = slides.length;
 var cur    = 0;
-var DUR    = 10000; // ms per slide
+var DUR        = 10000; // ms per slide (blog / podcast)
+var CUSTOM_DUR = 18000; // ms per custom card (text / image) — longer read time
 
-function setProgress(accent) {
+function slideDuration(idx) {
+  var s = slides[idx];
+  if (s && (s.className.indexOf('slide-text') !== -1 || s.className.indexOf('slide-image') !== -1)) {
+    return CUSTOM_DUR;
+  }
+  return DUR;
+}
+
+function setProgress(accent, dur) {
   if (!line) return;
   line.style.cssText =
     'position:absolute;bottom:4px;left:0;height:3px;width:0;z-index:100;' +
@@ -17,8 +26,8 @@ function setProgress(accent) {
     line.style.cssText =
       'position:absolute;bottom:4px;left:0;height:3px;width:0;z-index:100;' +
       'background:' + accent + ';' +
-      '-webkit-animation:progressLine ' + DUR + 'ms linear forwards;' +
-      'animation:progressLine ' + DUR + 'ms linear forwards;';
+      '-webkit-animation:progressLine ' + dur + 'ms linear forwards;' +
+      'animation:progressLine ' + dur + 'ms linear forwards;';
   }, 60);
 }
 
@@ -55,7 +64,7 @@ function goTo(n, opts) {
   if (opts.progressFull) {
     setProgressFull(accent);
   } else {
-    setProgress(accent);
+    setProgress(accent, slideDuration(cur));
   }
 }
 
@@ -75,7 +84,12 @@ if (SCREENSHOT_INDEX >= 0) {
   }
 } else {
   goTo(0);
-  setInterval(function () { goTo(cur + 1); }, DUR);
+  (function scheduleNext() {
+    setTimeout(function () {
+      goTo(cur + 1);
+      scheduleNext();
+    }, slideDuration(cur));
+  })();
 }
 
 // Live clock — HH:MM with blinking separator
