@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npx --version)",
+      "Bash(npx wrangler *)",
+      "Bash(rm -rf /tmp/payload-scaffold)",
+      "Bash(npx --yes degit payloadcms/payload/templates/with-cloudflare-d1 /tmp/payload-scaffold)",
+      "Bash(cd \"/Users/arjunkrishna/Developer/My Projects/kiosk-display\" && rm -rf worker && mv /tmp/payload-scaffold worker && ls worker/ && echo \"---\" && cat worker/.gitignore)",
+      "Bash(grep -A 25 \"CREATE TABLE \\\\`slides\\\\`\" \"/Users/arjunkrishna/Developer/My Projects/kiosk-display/worker/src/migrations/20260529_063320_slides.ts\")",
+      "Bash(awk '/CREATE TABLE `slides`/{found=1} found{print; if\\(/\\\\\\);/\\){exit}}' \"/Users/arjunkrishna/Developer/My Projects/kiosk-display/worker/src/migrations/20260529_063320_slides.ts\")",
+      "Bash(PAYLOAD_SECRET=dev-local-only WEBHOOK_SECRET=dev-webhook-secret GH_TOKEN=dev-token GITHUB_REPO=test/test DISPATCH_EVENT_TYPE=ghost-publish bun run dev)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code} body=\" http://localhost:3000/api/webhook/ghost)",
+      "Bash(curl -s http://localhost:3000/api/webhook/ghost)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" -X POST http://localhost:3000/api/webhook/ghost)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" -X POST \"http://localhost:3000/api/webhook/ghost?token=dev-webhook-secret\" -H \"X-Ghost-Event: post.published\")",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" -X POST http://localhost:3000/api/cron/check-boundaries)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" -X POST \"http://localhost:3000/api/webhook/ghost?token=wrong\")",
+      "Bash(curl -s -w \"\\\\nstatus=%{http_code}\\\\n\" -X POST http://localhost:3000/api/cron/check-boundaries -H \"x-cron-secret: dev-webhook-secret\")",
+      "Bash(cd \"/Users/arjunkrishna/Developer/My Projects/kiosk-display/worker\" && rm -rf .vscode && ls -la | head -20)",
+      "Bash(GHOST_CONTENT_API_KEY=de858d77141cc957615e54f70b bun run scripts/generate.js)",
+      "Bash(PAYLOAD_SECRET=dev bun run generate:types:payload)",
+      "Bash(PAYLOAD_SECRET=dev bun run generate:importmap)",
+      "Bash(PAYLOAD_SECRET=dev WEBHOOK_SECRET=dev GH_TOKEN=dev GITHUB_REPO=t/t DISPATCH_EVENT_TYPE=t timeout 5 bun run payload generate:types)",
+      "Bash(CLOUDFLARE_ACCOUNT_ID=6fa7a1660dd091afd88cdc6d7059e6f0 bunx wrangler whoami)",
+      "Bash(open \"/Users/arjunkrishna/Developer/My Projects/kiosk-display/out/index.html\")",
+      "Bash(rm -f .test-images/preview-magic.html)",
+      "Bash(node -e ' *)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp/payload-scaffold",
+      "/Users/arjunkrishna/Developer/My Projects/kiosk-display/worker/.vscode"
+    ]
+  }
+}

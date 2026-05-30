@@ -3,7 +3,7 @@ name: Build & Deploy Kiosk
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [ghost-publish]
+    types: [ghost-publish, cms-publish]
 
 concurrency:
   group: build-deploy
@@ -40,6 +40,7 @@ jobs:
           commit_message: 'deploy: refresh kiosk [${{ github.run_number }}]'
 
       - name: Post slide screenshots to Discord
+        if: github.event_name == 'workflow_dispatch' || github.event.action == 'ghost-publish'
         run: node scripts/post-screenshots.mjs
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

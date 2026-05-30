@@ -1,8 +1,9 @@
 import fs   from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { fetchPosts,     buildBlogSlide    } from './blogs.js';
-import { fetchPodcasts,  buildPodcastSlide } from './podcasts.js';
+import { fetchPosts, buildBlogSlide } from './blogs.js';
+import { fetchPodcasts, buildPodcastSlide } from './podcasts.js';
+import { fetchCustomSlides, buildCustomSlide } from './customs.js';
 import config from '../config.json' with { type: 'json' };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -117,6 +118,19 @@ async function main() {
   }
   console.log(`Copied style.css, app.js, wave.svg, wave-static.svg${ENABLE_SOUND ? ' and audio.js' : ' (sound disabled)'}`);
 
+  let customs = [];
+  if (config.cms.enable && config.cms.apiUrl) {
+    console.log('Fetching custom CMS slides\u2026');
+    try {
+      customs = await fetchCustomSlides();
+      console.log(`Fetched ${customs.length} custom slide(s)`);
+    } catch (e) {
+      console.warn('Custom CMS fetch failed:', e.message);
+    }
+  } else {
+    console.log('CMS disabled or apiUrl unset, skipping custom slides');
+  }
+
   // Fetch blog posts
   let posts = [];
   if (config.ghost.enable) {
@@ -142,12 +156,13 @@ async function main() {
     console.log('Podcasts disabled in config.json, skipping');
   }
 
-  // Group by type (date-sorted within each group), blogs first then podcasts
+  // Custom slides arrive pre-sorted from Payload (pinnedOrder asc, publishAt desc).
+  const customItems  = customs.map(c => ({ ...c, _type: 'custom' }));
   const blogItems    = posts.map(p => ({ ...p, _type: 'blog',    _date: new Date(p.published_at) }))
                             .sort((a, b) => b._date - a._date);
   const podcastItems = podcastEpisodes.map(e => ({ ...e, _type: 'podcast', _date: new Date(e.release_date) }))
                                       .sort((a, b) => b._date - a._date);
-  const allItems = [...blogItems, ...podcastItems];
+  const allItems = [...customItems, ...blogItems, ...podcastItems];
 
   console.log('Fetching logo\u2026');
   const logoSrc = await fetchLogo();
@@ -161,11 +176,11 @@ async function main() {
     slidesHtml = '    <div class="slide active" data-accent="#6C63FF"><div class="empty"><div class="empty-text">No content yet \u2014 check back soon</div></div></div>';
     dotsHtml   = '      <div class="dot active"></div>';
   } else {
-    const built = await Promise.all(allItems.map((item, i) =>
-      item._type === 'podcast'
-        ? buildPodcastSlide(item, podcastShow, i)
-        : buildBlogSlide(item, i)
-    ));
+    const built = await Promise.all(allItems.map((item, i) => {
+      if (item._type === 'custom')  return buildCustomSlide(item, i);
+      if (item._type === 'podcast') return buildPodcastSlide(item, podcastShow, i);
+      return buildBlogSlide(item, i);
+    }));
     slidesHtml = built.join('');
     dotsHtml   = buildDots(allItems);
   }
@@ -178,6 +193,7 @@ async function main() {
   // Write build manifest (consumed by post-deploy screenshot step to know slide counts and confirm propagation)
   const buildId = process.env.RUN_NUMBER || String(Date.now());
   const manifest = {
+    customCount: customItems.length,
     blogCount: blogItems.length,
     podcastCount: podcastItems.length,
     slideCount: allItems.length,
@@ -196,7 +212,7 @@ async function main() {
   }
 
   const kb = (Buffer.byteLength(html, 'utf8') / 1024).toFixed(1);
-  console.log(`Written out/index.html  (${kb} KB, ${allItems.length} slides: ${posts.length} blog, ${podcastEpisodes.length} podcast)`);
+  console.log(`Written out/index.html  (${kb} KB, ${allItems.length} slides: ${customItems.length} custom, ${posts.length} blog, ${podcastEpisodes.length} podcast)`);
   console.log(`Output: ${OUT_DIR}`);
 }
 

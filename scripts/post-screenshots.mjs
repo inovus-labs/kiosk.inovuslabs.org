@@ -106,7 +106,7 @@ async function postToDiscord(png, manifest) {
     fields: [
       {
         name: 'On the kiosk',
-        value: `**${manifest.slideCount}** slides · **${manifest.blogCount}** blog · **${manifest.podcastCount}** podcast`,
+        value: `**${manifest.slideCount}** slides · **${manifest.blogCount}** blog · **${manifest.podcastCount}** podcast · **${manifest.customCount}** custom`,
         inline: true,
       },
       {
@@ -147,14 +147,17 @@ async function main() {
   }
   info(`manifest live: ${JSON.stringify(manifest)}`);
 
-  const blogCount = Number(manifest.blogCount) || 0;
+  const customCount = Number(manifest.customCount) || 0;
+  const blogCount   = Number(manifest.blogCount)   || 0;
   if (blogCount === 0) {
-    info('blogCount=0; nothing to screenshot');
+    info('no blog slides; nothing to screenshot');
     return;
   }
 
-  info('capturing slide 0 (newest blog)…');
-  const png = await captureSlide(0);
+  // Custom slides prepend the slideshow, so the newest blog lives at index = customCount.
+  const blogIndex = customCount;
+  info(`capturing slide ${blogIndex} (newest blog) as PNG…`);
+  const png = await captureSlide(blogIndex);
   if (!png) {
     warn('no screenshot captured; nothing to post');
     return;
