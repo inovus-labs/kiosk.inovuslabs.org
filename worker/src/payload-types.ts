@@ -170,6 +170,10 @@ export interface Media {
 export interface Slide {
   id: number;
   type: 'text' | 'image';
+  /**
+   * Background colour theme for the moving gradient.
+   */
+  theme?: ('midnight' | 'slate' | 'emerald' | 'bordeaux') | null;
   title?: string | null;
   body?: string | null;
   media?: (number | null) | Media;
@@ -308,6 +312,7 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface SlidesSelect<T extends boolean = true> {
   type?: T;
+  theme?: T;
   title?: T;
   body?: T;
   media?: T;

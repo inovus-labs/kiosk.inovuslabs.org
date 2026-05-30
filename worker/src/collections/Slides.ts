@@ -45,6 +45,21 @@ export const Slides: CollectionConfig = {
       ],
     },
     {
+      name: 'theme',
+      type: 'select',
+      defaultValue: 'midnight',
+      options: [
+        { label: 'Midnight (deep navy)', value: 'midnight' },
+        { label: 'Slate (graphite)', value: 'slate' },
+        { label: 'Emerald (forest green)', value: 'emerald' },
+        { label: 'Bordeaux (deep wine)', value: 'bordeaux' },
+      ],
+      admin: {
+        condition: (data) => data?.type === 'text',
+        description: 'Background colour theme for the moving gradient.',
+      },
+    },
+    {
       name: 'title',
       type: 'text',
       admin: { condition: (data) => data?.type === 'text' },
