@@ -439,9 +439,13 @@ html.screenshot-mode .slide.active .cover {
   position: absolute;
   bottom: 4px; left: 0;
   height: 3px;
-  width: 0;
+  width: 100%;
   z-index: 100;
   background: #6C63FF;
+  -webkit-transform: scaleX(0);
+  transform: scaleX(0);
+  -webkit-transform-origin: left center;
+  transform-origin: left center;
 }
 
 /* ── PODCAST SLIDE ────────────────────────────────── */
@@ -660,12 +664,12 @@ html.screenshot-mode .slide.podcast.active .podcast-bg {
 }
 
 @-webkit-keyframes progressLine {
-  from { width: 0%; }
-  to   { width: 100%; }
+  from { -webkit-transform: scaleX(0); }
+  to   { -webkit-transform: scaleX(1); }
 }
 @keyframes progressLine {
-  from { width: 0%; }
-  to   { width: 100%; }
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
 /* ── SCREEN GUARD (landscape / wrong orientation) ── */
@@ -868,96 +872,28 @@ html.screenshot-mode .slide.slide-image .cover {
 
 /* ── TEXT SLIDE: editorial aurora billboard ───────────────────────── */
 
-/* Moving-colour field — blended blob layers drifting on a seamless loop.
-   Palette comes from per-theme CSS variables (theme blocks below). */
-.slide.slide-text {
-  background: var(--bb-base, #241f63);
-}
-
-.slide.slide-text .billboard-aurora {
-  position: absolute;
-  top: -20%; left: -20%; right: -20%; bottom: -20%;
-  z-index: 1;
-  background:
-    radial-gradient(42% 38% at 22% 24%, var(--bb-a1), transparent 60%),
-    radial-gradient(46% 42% at 80% 18%, var(--bb-a2), transparent 62%),
-    radial-gradient(50% 46% at 60% 88%, var(--bb-a3), transparent 60%);
-  -webkit-transform: scale(1.25);
-  transform: scale(1.25);
-}
-
-.slide.slide-text .billboard-aurora::before,
-.slide.slide-text .billboard-aurora::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-}
-
-/* Second colour set, screen-blended for vivid overlaps. */
-.slide.slide-text .billboard-aurora::before {
-  background:
-    radial-gradient(44% 40% at 78% 72%, var(--bb-b1), transparent 60%),
-    radial-gradient(48% 44% at 16% 78%, var(--bb-b2), transparent 62%),
-    radial-gradient(50% 46% at 30% 12%, var(--bb-b3), transparent 60%);
-  mix-blend-mode: screen;
-  -webkit-transform: scale(1.35);
-  transform: scale(1.35);
-}
-
-/* Soft moving highlight for depth (theme-independent). */
-.slide.slide-text .billboard-aurora::after {
-  background:
-    radial-gradient(46% 44% at 50% 32%, rgba(255, 255, 255, 0.16), transparent 60%);
-  mix-blend-mode: screen;
-  -webkit-transform: scale(1.30);
-  transform: scale(1.30);
-}
-
-
-/* ── Text-slide themes (premium, muted, professional) ───────────────── */
-
-/* Midnight — deep navy with soft steel-blue glows. */
 .slide.slide-text.theme-midnight {
-  --bb-base: #0b1430;
-  --bb-a1: rgba(58, 102, 196, 0.55);
-  --bb-a2: rgba(44, 74, 150, 0.50);
-  --bb-a3: rgba(78, 120, 200, 0.45);
-  --bb-b1: rgba(96, 140, 214, 0.38);
-  --bb-b2: rgba(52, 86, 168, 0.42);
-  --bb-b3: rgba(126, 162, 224, 0.28);
+  background: #0b1430;
+  background: -webkit-linear-gradient(top left, #0b1430, #243a6b);
+  background: linear-gradient(to bottom right, #0b1430, #243a6b);
 }
 
-/* Slate — graphite charcoal with cool steel accents (neutral, corporate). */
 .slide.slide-text.theme-slate {
-  --bb-base: #14171d;
-  --bb-a1: rgba(96, 112, 134, 0.52);
-  --bb-a2: rgba(70, 84, 104, 0.50);
-  --bb-a3: rgba(116, 132, 154, 0.44);
-  --bb-b1: rgba(132, 150, 174, 0.34);
-  --bb-b2: rgba(82, 98, 120, 0.44);
-  --bb-b3: rgba(158, 174, 196, 0.24);
+  background: #14171d;
+  background: -webkit-linear-gradient(top left, #14171d, #36404f);
+  background: linear-gradient(to bottom right, #14171d, #36404f);
 }
 
-/* Emerald — deep forest green, restrained and refined. */
 .slide.slide-text.theme-emerald {
-  --bb-base: #06241d;
-  --bb-a1: rgba(26, 122, 92, 0.55);
-  --bb-a2: rgba(18, 92, 72, 0.52);
-  --bb-a3: rgba(40, 142, 108, 0.45);
-  --bb-b1: rgba(64, 162, 130, 0.36);
-  --bb-b2: rgba(28, 108, 86, 0.44);
-  --bb-b3: rgba(96, 184, 150, 0.26);
+  background: #06241d;
+  background: -webkit-linear-gradient(top left, #06241d, #15604a);
+  background: linear-gradient(to bottom right, #06241d, #15604a);
 }
 
-/* Bordeaux — deep wine with muted rose (warm, premium). */
 .slide.slide-text.theme-bordeaux {
-  --bb-base: #2a0f1c;
-  --bb-a1: rgba(150, 48, 84, 0.55);
-  --bb-a2: rgba(112, 34, 66, 0.52);
-  --bb-a3: rgba(176, 70, 104, 0.44);
-  --bb-b1: rgba(190, 96, 124, 0.36);
-  --bb-b2: rgba(128, 46, 80, 0.44);
-  --bb-b3: rgba(206, 120, 146, 0.26);
+  background: #2a0f1c;
+  background: -webkit-linear-gradient(top left, #2a0f1c, #6e2746);
+  background: linear-gradient(to bottom right, #2a0f1c, #6e2746);
 }
 
 /* Bottom shade — guarantees contrast for the lower-anchored copy. */
@@ -1039,13 +975,6 @@ html.screenshot-mode .slide.slide-image .cover {
 .slide.slide-text.active .billboard-body {
   -webkit-animation: riseIn 0.62s 0.42s forwards;
   animation: riseIn 0.62s 0.42s forwards;
-}
-
-html.screenshot-mode .slide.slide-text .billboard-aurora {
-  -webkit-animation: none;
-  animation: none;
-  -webkit-transform: none;
-  transform: none;
 }
 
 html.screenshot-mode .slide.slide-text .billboard-headline,

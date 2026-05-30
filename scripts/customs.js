@@ -70,7 +70,6 @@ export function buildTextSlide(slide, index) {
   const accent   = THEME_ACCENTS[theme];
   return `
     <div class="slide slide-text theme-${theme}${index === 0 ? ' active' : ''}" data-accent="${accent}">
-      <div class="billboard-aurora"></div>
       <div class="billboard-grain"></div>
       <div class="billboard-inner">
         <div class="billboard-headline${titleMl ? ' lang-ml' : ''}">${title}</div>

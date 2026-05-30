@@ -17,25 +17,27 @@ function slideDuration(idx) {
   return DUR;
 }
 
+var PROGRESS_BASE =
+  'position:absolute;bottom:4px;left:0;height:3px;width:100%;z-index:100;' +
+  '-webkit-transform-origin:left center;transform-origin:left center;will-change:transform;';
+
 function setProgress(accent, dur) {
   if (!line) return;
-  line.style.cssText =
-    'position:absolute;bottom:4px;left:0;height:3px;width:0;z-index:100;' +
-    'background:' + accent + ';-webkit-animation:none;animation:none;';
-  setTimeout(function () {
-    line.style.cssText =
-      'position:absolute;bottom:4px;left:0;height:3px;width:0;z-index:100;' +
-      'background:' + accent + ';' +
-      '-webkit-animation:progressLine ' + dur + 'ms linear forwards;' +
-      'animation:progressLine ' + dur + 'ms linear forwards;';
-  }, 60);
+  line.style.cssText = PROGRESS_BASE +
+    'background:' + accent + ';-webkit-transform:scaleX(0);transform:scaleX(0);' +
+    '-webkit-animation:none;animation:none;';
+  void line.offsetWidth;
+  line.style.cssText = PROGRESS_BASE +
+    'background:' + accent + ';' +
+    '-webkit-animation:progressLine ' + dur + 'ms linear forwards;' +
+    'animation:progressLine ' + dur + 'ms linear forwards;';
 }
 
 function setProgressFull(accent) {
   if (!line) return;
-  line.style.cssText =
-    'position:absolute;bottom:4px;left:0;height:3px;width:100%;z-index:100;' +
-    'background:' + accent + ';-webkit-animation:none;animation:none;';
+  line.style.cssText = PROGRESS_BASE +
+    'background:' + accent + ';-webkit-transform:scaleX(1);transform:scaleX(1);' +
+    '-webkit-animation:none;animation:none;';
 }
 
 function goTo(n, opts) {
