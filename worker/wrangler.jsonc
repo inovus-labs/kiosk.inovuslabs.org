@@ -10,7 +10,6 @@
       "binding": "D1",
       "database_id": "ae469523-0116-44e3-8e0d-f44dd65643f7",
       "database_name": "kiosk-db",
-      "remote": true,
     },
   ],
   "r2_buckets": [{ "binding": "R2", "bucket_name": "kiosk-media" }],

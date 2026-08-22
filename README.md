@@ -151,7 +151,7 @@ The [`worker/`](worker/) directory is a [Payload CMS](https://payloadcms.com/) (
 
 Backed by **Cloudflare D1** (slides table) and **Cloudflare R2** (media uploads, served from a managed public URL so the kiosk loads images directly without proxying through the worker). An hourly cron checks for `publishAt`/`expiresAt` boundary crossings and triggers a rebuild when one is detected.
 
-**Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that ships the worker. The build itself never touches remote D1 (a build container cannot open a wrangler remote binding session); pending migrations are applied by the deployed worker on its first connect, via `prodMigrations` in [`payload.config.ts`](worker/src/payload.config.ts). Configured at the worker level in the Cloudflare dashboard:
+**Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that ships the worker. Nothing in the pipeline touches remote D1: a build container cannot open a wrangler remote binding session, and both `opennextjs-cloudflare build` and `opennextjs-cloudflare deploy` call `getPlatformProxy()`, which tries to open one for any binding marked `"remote": true` in [`wrangler.jsonc`](worker/wrangler.jsonc) — so that flag stays off. Pending migrations are applied by the deployed worker on its first connect, via `prodMigrations` in [`payload.config.ts`](worker/src/payload.config.ts). Configured at the worker level in the Cloudflare dashboard:
 
 | Field | Value |
 |---|---|
