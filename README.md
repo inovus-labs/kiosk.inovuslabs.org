@@ -151,12 +151,12 @@ The [`worker/`](worker/) directory is a [Payload CMS](https://payloadcms.com/) (
 
 Backed by **Cloudflare D1** (slides table) and **Cloudflare R2** (media uploads, served from a managed public URL so the kiosk loads images directly without proxying through the worker). An hourly cron checks for `publishAt`/`expiresAt` boundary crossings and triggers a rebuild when one is detected.
 
-**Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that runs migrations against remote D1 and ships the worker. Configured at the worker level in the Cloudflare dashboard:
+**Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that ships the worker. The build itself never touches remote D1 (a build container cannot open a wrangler remote binding session); pending migrations are applied by the deployed worker on its first connect, via `prodMigrations` in [`payload.config.ts`](worker/src/payload.config.ts). Configured at the worker level in the Cloudflare dashboard:
 
 | Field | Value |
 |---|---|
 | Root directory | `/worker` |
-| Build command | `bun run migrate && bunx opennextjs-cloudflare build` |
+| Build command | `bun run build:cloudflare` |
 | Deploy command | `bunx opennextjs-cloudflare deploy` |
 
 **Worker runtime secrets** (set in Cloudflare dashboard → kiosk-worker → Settings → Variables and Secrets):
