@@ -1,13 +1,15 @@
 import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
 
-const COLLECTION = "slides";
+/** Every collection whose live entries appear on the kiosk. */
+const SLIDE_COLLECTIONS = ["image_slides", "text_slides"];
+const isSlide = (collection: string) => SLIDE_COLLECTIONS.includes(collection);
 
 /**
  * Rebuild the kiosk whenever the set of live slides changes.
  *
  * Publish, unpublish and trash are the only transitions that change what the
- * kiosk shows: `slides` has revisions enabled, so saving a published slide only
+ * kiosk shows: slide collections have revisions enabled, so saving a published slide only
  * edits its draft until "Publish changes". Scheduled publishing runs the same
  * `afterPublish` hook when the slide goes live, and the `expire` route below
  * unpublishes expired slides, which lands in `afterUnpublish`.
@@ -39,13 +41,13 @@ export function createPlugin() {
 			"content:afterPublish": {
 				timeout: 10_000,
 				handler: async ({ collection, content }, ctx) => {
-					if (collection === COLLECTION) await rebuild(ctx, "slide.publish", content);
+					if (isSlide(collection)) await rebuild(ctx, "slide.publish", content);
 				},
 			},
 			"content:afterUnpublish": {
 				timeout: 10_000,
 				handler: async ({ collection, content }, ctx) => {
-					if (collection === COLLECTION) await rebuild(ctx, "slide.unpublish", content);
+					if (isSlide(collection)) await rebuild(ctx, "slide.unpublish", content);
 				},
 			},
 			// Moving a live slide to trash removes it from the feed; purging an
@@ -53,7 +55,7 @@ export function createPlugin() {
 			"content:afterDelete": {
 				timeout: 10_000,
 				handler: async ({ collection, permanent }, ctx) => {
-					if (collection === COLLECTION && !permanent) await rebuild(ctx, "slide.delete");
+					if (isSlide(collection) && !permanent) await rebuild(ctx, "slide.delete");
 				},
 			},
 		},
@@ -62,19 +64,19 @@ export function createPlugin() {
 			expire: {
 				handler: async (ctx) => {
 					const content = ctx.content!;
-					const { items } = await content.list(COLLECTION, {
-						limit: 50,
-						where: {
-							status: "published",
-							fieldFilters: { expires_at: { lte: new Date().toISOString() } },
-						},
-					});
+					const now = new Date().toISOString();
 					const expired: string[] = [];
-					for (const item of items) {
-						const current = await content.getVersioned!(COLLECTION, item.id);
-						if (!current) continue;
-						await content.unpublish!(COLLECTION, item.id, { _rev: current._rev });
-						expired.push(item.id);
+					for (const collection of SLIDE_COLLECTIONS) {
+						const { items } = await content.list(collection, {
+							limit: 50,
+							where: { status: "published", fieldFilters: { expires_at: { lte: now } } },
+						});
+						for (const item of items) {
+							const current = await content.getVersioned!(collection, item.id);
+							if (!current) continue;
+							await content.unpublish!(collection, item.id, { _rev: current._rev });
+							expired.push(item.id);
+						}
 					}
 					if (expired.length > 0) ctx.log.info("Unpublished expired slides", { expired });
 					return { expired };
