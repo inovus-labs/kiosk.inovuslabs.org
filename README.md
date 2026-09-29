@@ -18,7 +18,7 @@ flowchart TD
     E[(Podcast RSS feed)]:::source
 
     %% ── Build & deploy pipeline ─────────────────
-    W[Cloudflare Worker<br/>Payload CMS]:::cf
+    W[Cloudflare Worker<br/>EmDash CMS]:::cf
     B[GitHub Actions]:::gh
     C[GitHub Pages]:::gh
     D[Portrait TV<br/>1080 × 1920]:::tv
@@ -53,26 +53,26 @@ The worker listens for three event sources and fires a `repository_dispatch` at 
 | Source | `event_type` fired |
 |---|---|
 | Ghost `post.published` / `post.unpublished` webhook (mid-edit `post.updated` is intentionally not subscribed) | `ghost-publish` |
-| Lab member saves a slide in the Payload admin (`afterChange` hook) | `cms-publish` |
-| Hourly cron detects a `publishAt` / `expiresAt` boundary crossing | `cms-publish` |
+| Lab member publishes, unpublishes, or trashes a slide in the EmDash admin | `cms-publish` |
+| A scheduled slide goes live, or a slide passes its `expires_at` (checked every minute) | `cms-publish` |
 
-GitHub Actions accepts both event types and does the same fetch + build work either way: blog posts from Ghost, podcast episodes from the RSS feed, and published custom slides from the worker's REST API at `/api/slides`. It generates a fully self-contained `index.html` and pushes it to the `gh-pages` branch, which GitHub Pages serves. The TV auto-refreshes every 30 min as a safety net.
+GitHub Actions accepts both event types and does the same fetch + build work either way: blog posts from Ghost, podcast episodes from the RSS feed, and live custom slides from the worker's `/api/slides.json` feed (poster images are downloaded into the build). It generates a fully self-contained `index.html` and pushes it to the `gh-pages` branch, which GitHub Pages serves. The TV auto-refreshes every 30 min as a safety net.
 
 **Discord screenshot only fires for `ghost-publish`** — new blog posts get a story-ready 1080×1920 PNG posted to Discord; custom slide updates don't (kiosk-internal content, no notification needed).
 
-Because the build runs in Actions and the kiosk is fully static, the worker being down only affects *new* publishing — the kiosk keeps rendering the last successful build indefinitely. Images load directly from R2's managed public URL, independent of the worker.
+Because the build runs in Actions and the kiosk is fully static, the worker being down only affects *new* publishing — the kiosk keeps rendering the last successful build indefinitely. Poster images are bundled into `out/media/` at build time, so nothing on screen is served by the worker.
 
 
 ## On screen
 
 | Content | Source | Status |
 |---|---|---|
-| Custom text-message slides (billboard layout) | Payload CMS · `kiosk-worker` | ✅ Live |
-| Custom image slides (edge-to-edge poster) | Payload CMS · `kiosk-worker` | ✅ Live |
+| Custom text-message slides (billboard layout) | EmDash CMS · `kiosk-worker` | ✅ Live |
+| Custom image slides (edge-to-edge poster) | EmDash CMS · `kiosk-worker` | ✅ Live |
 | Blog posts | Ghost CMS | ✅ Live |
 | Podcast episodes | Spotify for Podcasters · RSS feed | ✅ Live |
 
-Slide order on the kiosk: `[custom slides] → [blog posts] → [podcast episodes]`. Custom slides are sorted by `pinnedOrder asc nulls last, publishAt desc`; blogs and podcasts are newest-first within their groups.
+Slide order on the kiosk: `[custom slides] → [blog posts] → [podcast episodes]`. Custom slides are sorted by `pinned_order asc nulls last, published_at desc`; blogs and podcasts are newest-first within their groups.
 
 
 ## Features
@@ -82,7 +82,7 @@ Slide order on the kiosk: `[custom slides] → [blog posts] → [podcast episode
 - Every blog slide has a scannable QR code that opens the full post on your phone, with UTM parameters for tracking.
 - Podcast slides show episode artwork, duration, release date, and a QR code linking to Spotify.
 - Custom slides come in two flavours: a full-bleed image poster, or a centered text billboard.
-- Lab members can schedule a slide for the future (`publishAt`) or set a TTL (`expiresAt`); the worker auto-rebuilds when the boundary crosses.
+- Lab members can schedule a slide for the future (EmDash's built-in scheduling) or set an `expires_at`; the kiosk rebuilds within a minute of either.
 - Always-on HH:MM clock in the top-right, with a blinking separator.
 - Optional SomaFM radio stream running quietly in the background.
 - Any screen that isn't portrait and close to 9:16 gets a friendly overlay instead of a broken layout.
@@ -141,29 +141,40 @@ Set these in repository **Settings → Secrets and variables → Actions secrets
 GitHub Pages must be set to serve from the `gh-pages` branch.
 
 
-## kiosk-worker — Payload CMS + Ghost webhook bridge
+## kiosk-worker — EmDash CMS + Ghost webhook bridge
 
-The [`worker/`](worker/) directory is a [Payload CMS](https://payloadcms.com/) (Next.js + OpenNext) deployed to a Cloudflare Worker. It serves three purposes:
+The [`worker/`](worker/) directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](worker/wrangler.jsonc). It serves four purposes:
 
-1. **Payload admin** at `/admin` — where lab members log in and publish custom slides (text or image, with `publishAt` and `expiresAt`).
-2. **REST API** at `/api/slides` — the GitHub Actions build script fetches published+active slides from here.
+1. **EmDash admin** at `/_emdash/admin` — lab members sign in with a passkey and manage **Slides** (text or image). Drafts, revisions, scheduled publishing, and the media library are built in.
+2. **Slide feed** at `/api/slides.json` — the live slides, already filtered and ordered, read by the GitHub Actions build.
 3. **Ghost webhook** at `/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
+4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](worker/src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
 
-Backed by **Cloudflare D1** (slides table) and **Cloudflare R2** (media uploads, served from a managed public URL so the kiosk loads images directly without proxying through the worker). An hourly cron checks for `publishAt`/`expiresAt` boundary crossings and triggers a rebuild when one is detected.
+The content model lives in [`seed/seed.json`](worker/seed/seed.json) and is applied on first boot; there are no migration files to maintain. To change it on a live site, see [Evolving a deployed site](https://docs.emdashcms.com/deployment/schema-evolution/).
 
-**Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that ships the worker. Nothing in the pipeline touches remote D1: a build container cannot open a wrangler remote binding session, and both `opennextjs-cloudflare build` and `opennextjs-cloudflare deploy` call `getPlatformProxy()`, which tries to open one for any binding marked `"remote": true` in [`wrangler.jsonc`](worker/wrangler.jsonc) — so that flag stays off. Pending migrations are applied by the deployed worker on its first connect, via `prodMigrations` in [`payload.config.ts`](worker/src/payload.config.ts). Configured at the worker level in the Cloudflare dashboard:
+**Local development** (from `worker/`):
+
+```bash
+bun install
+bunx emdash secrets generate --write .env   # once; also add WEBHOOK_SECRET and GH_TOKEN to .env
+bun run dev                                  # admin at http://localhost:4321/_emdash/admin
+```
+
+> Publishing a slide locally fires a real `repository_dispatch` if `.env` holds a valid `GH_TOKEN`. Use a dummy token unless you want a real rebuild.
+
+**Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that ships the worker. EmDash applies its database migrations and the seed on the first request after a deploy. Open `/_emdash/admin` afterwards to run the setup wizard and register the first admin passkey. Invite other lab members from **Users → Invite** (copy the invite link — no email provider is configured). Configured at the worker level in the Cloudflare dashboard:
 
 | Field | Value |
 |---|---|
 | Root directory | `/worker` |
-| Build command | `bun run build:cloudflare` |
-| Deploy command | `bunx opennextjs-cloudflare deploy` |
+| Build command | `bun run build` |
+| Deploy command | `bunx wrangler deploy` |
 
-**Worker runtime secrets** (set in Cloudflare dashboard → kiosk-worker → Settings → Variables and Secrets):
+**Worker runtime secrets** (set in Cloudflare dashboard → kiosk-worker → Settings → Variables and Secrets, or `bunx wrangler secret put <NAME>`):
 
 | Name | Description |
 |---|---|
-| `PAYLOAD_SECRET` | Random hex string used by Payload to sign sessions |
+| `EMDASH_ENCRYPTION_KEY` | Generate with `bunx emdash secrets generate`; encrypts plugin secrets. Back it up. |
 | `WEBHOOK_SECRET` | Random string; same value goes into the Ghost webhook URL as `?token=` |
 | `GH_TOKEN` | GitHub fine-grained PAT scoped to this repo with `Contents: write` |
 
@@ -176,7 +187,7 @@ Backed by **Cloudflare D1** (slides table) and **Cloudflare R2** (media uploads,
 | Orientation | Portrait |
 | Slide duration | 10 seconds |
 | Page refresh | Every 30 minutes |
-| Build triggers | Ghost webhook · Payload admin save · hourly TTL cron · manual dispatch |
+| Build triggers | Ghost webhook · slide publish / unpublish / trash · scheduled publish · expiry · manual dispatch |
 
 
 ## License
