@@ -109,7 +109,7 @@ All other settings — sources, item limits, the kiosk-CMS URL, sound — live i
 
 ```json
 {
-  "cms":     { "enable": true, "apiUrl": "https://kiosk-worker.inovustv.workers.dev", "limit": 10 },
+  "cms":     { "enable": true, "apiUrl": "https://kiosk-cms.inovuslabs.org", "limit": 10 },
   "ghost":   { "enable": true, "apiUrl": "https://blog.inovuslabs.org", "postLimit": 6 },
   "podcast": { "enable": true, "rssUrl": "https://.../podcast/rss", "episodeLimit": 6 },
   "display": { "logoUrl": "https://inovuslabs.org/assets/logo.svg", "enableSound": true }
@@ -143,11 +143,11 @@ GitHub Pages must be set to serve from the `gh-pages` branch.
 
 ## kiosk-worker — EmDash CMS + Ghost webhook bridge
 
-The [`worker/`](worker/) directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](worker/wrangler.jsonc). It serves four purposes:
+The [`worker/`](worker/) directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker at **[kiosk-cms.inovuslabs.org](https://kiosk-cms.inovuslabs.org)**, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](worker/wrangler.jsonc). It serves four purposes:
 
 1. **EmDash admin** at `/_emdash/admin` — lab members sign in with a passkey and manage **Slides** (text or image). Drafts, revisions, scheduled publishing, and the media library are built in.
 2. **Slide feed** at `/api/slides.json` — the live slides, already filtered and ordered, read by the GitHub Actions build.
-3. **Ghost webhook** at `/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
+3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
 4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](worker/src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
 
 The content model lives in [`seed/seed.json`](worker/seed/seed.json) and is applied on first boot; there are no migration files to maintain. To change it on a live site, see [Evolving a deployed site](https://docs.emdashcms.com/deployment/schema-evolution/).

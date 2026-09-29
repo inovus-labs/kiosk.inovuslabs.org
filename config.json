@@ -1,7 +1,7 @@
 {
   "cms": {
     "enable": true,
-    "apiUrl": "https://kiosk-worker.inovustv.workers.dev",
+    "apiUrl": "https://kiosk-cms.inovuslabs.org",
     "limit": 5
   },
   "ghost": {
