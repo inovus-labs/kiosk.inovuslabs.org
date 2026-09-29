@@ -72,7 +72,7 @@ Because the build runs in Actions and the kiosk is fully static, the worker bein
 | Blog posts | Ghost CMS | ✅ Live |
 | Podcast episodes | Spotify for Podcasters · RSS feed | ✅ Live |
 
-Slide order on the kiosk: `[custom slides] → [blog posts] → [podcast episodes]`. Custom slides are sorted by `pinned_order asc nulls last, published_at desc`; blogs and podcasts are newest-first within their groups.
+Slide order on the kiosk: `[custom slides] → [blog posts] → [podcast episodes]`. Custom slides (image and text together) are sorted by `pinned_order asc nulls last, published_at desc`; blogs and podcasts are newest-first within their groups.
 
 
 ## Features
@@ -145,7 +145,7 @@ GitHub Pages must be set to serve from the `gh-pages` branch.
 
 The [`worker/`](worker/) directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker at **[kiosk-cms.inovuslabs.org](https://kiosk-cms.inovuslabs.org)**, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](worker/wrangler.jsonc). It serves four purposes:
 
-1. **EmDash admin** at `/_emdash/admin` — lab members sign in with a passkey and manage **Slides** (text or image). Drafts, revisions, scheduled publishing, and the media library are built in.
+1. **EmDash admin** at `/_emdash/admin` — lab members sign in with a passkey and manage slides in two collections under the **Slides** folder: **Image slides** (a poster) and **Text slides** (headline, body, theme), so each form only shows its own fields. Drafts, revisions, scheduled publishing, and the media library are built in. Leave **Expires at** empty to keep a slide up indefinitely; a lower **Pinned order** shows first (empty = newest first); an empty **Theme** renders as Midnight.
 2. **Slide feed** at `/api/slides.json` — the live slides, already filtered and ordered, read by the GitHub Actions build.
 3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
 4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](worker/src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
