@@ -1,0 +1,77 @@
+{
+	"$schema": "https://emdashcms.com/seed.schema.json",
+	"version": "1",
+	"meta": {
+		"name": "Kiosk",
+		"description": "Custom slides for the Inovus Labs kiosk display",
+		"author": "Inovus Labs"
+	},
+	"settings": {
+		"title": "Inovus Labs Kiosk",
+		"tagline": "Custom slides for kiosk.inovuslabs.org",
+		"timezone": "Asia/Kolkata"
+	},
+	"collections": [
+		{
+			"slug": "slides",
+			"label": "Slides",
+			"labelSingular": "Slide",
+			"description": "Text billboards and image posters shown before blog posts and podcasts. Publish (or schedule) to put a slide on the kiosk.",
+			"icon": "presentation",
+			"routable": false,
+			"supports": ["drafts", "revisions", "scheduling"],
+			"titleField": "title",
+			"admin": { "listColumns": ["type", "expires_at", "pinned_order"] },
+			"fields": [
+				{
+					"slug": "title",
+					"label": "Title (headline on text slides, internal label on image slides)",
+					"type": "string",
+					"required": true,
+					"validation": { "maxLength": 120 }
+				},
+				{
+					"slug": "type",
+					"label": "Type",
+					"type": "select",
+					"required": true,
+					"defaultValue": "text",
+					"validation": { "options": ["text", "image"] }
+				},
+				{
+					"slug": "body",
+					"label": "Body (text slides)",
+					"type": "text",
+					"validation": { "maxLength": 400 }
+				},
+				{
+					"slug": "theme",
+					"label": "Theme (text slides)",
+					"type": "select",
+					"defaultValue": "midnight",
+					"validation": { "options": ["midnight", "slate", "emerald", "bordeaux"] }
+				},
+				{
+					"slug": "image",
+					"label": "Poster image (image slides, 1080 × 1920)",
+					"type": "image",
+					"validation": {
+						"allowedMimeTypes": ["image/jpeg", "image/png", "image/webp", "image/avif"]
+					}
+				},
+				{
+					"slug": "expires_at",
+					"label": "Expires at (auto-unpublish; leave empty to keep)",
+					"type": "datetime",
+					"indexed": true
+				},
+				{
+					"slug": "pinned_order",
+					"label": "Pinned order (lower = shown first; empty = newest first)",
+					"type": "integer",
+					"indexed": true
+				}
+			]
+		}
+	]
+}

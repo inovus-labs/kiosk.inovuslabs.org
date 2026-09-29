@@ -1,0 +1,15 @@
+node_modules
+dist
+.astro
+.emdash/migrations.json
+.wrangler
+worker-configuration.d.ts
+uploads
+data.db
+.DS_Store
+
+# Environment / Wrangler secrets
+.env
+.env.*
+.dev.vars
+.dev.vars.*

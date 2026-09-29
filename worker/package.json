@@ -1,0 +1,37 @@
+{
+  "name": "kiosk-worker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Kiosk CMS (EmDash on Cloudflare Workers) + Ghost webhook bridge for kiosk.inovuslabs.org",
+  "license": "MIT",
+  "type": "module",
+  "emdash": {
+    "label": "Kiosk",
+    "seed": "seed/seed.json"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "deploy": "astro build && wrangler deploy",
+    "typecheck": "wrangler types && astro check"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.3.3",
+    "@astrojs/react": "^6.0.6",
+    "@emdash-cms/cloudflare": "^1.0.1",
+    "astro": "^7.3.5",
+    "emdash": "^1.0.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "^5.20260929.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.143.1"
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  }
+}
