@@ -15,7 +15,8 @@ const isSlide = (collection: string) => SLIDE_COLLECTIONS.includes(collection);
  * unpublishes expired slides, which lands in `afterUnpublish`.
  */
 async function rebuild(ctx: PluginContext, event: string, content?: Record<string, unknown>) {
-	const title = (content?.data as { title?: string } | undefined)?.title;
+	const data = content?.data as { headline?: string; label?: string } | undefined;
+	const title = data?.headline ?? data?.label;
 	try {
 		const { env } = await import("cloudflare:workers");
 		const { dispatchBuild } = await import("../lib/github");

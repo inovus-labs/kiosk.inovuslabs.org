@@ -22,12 +22,12 @@
 			"sortOrder": 1,
 			"routable": false,
 			"supports": ["drafts", "revisions", "scheduling"],
-			"titleField": "title",
+			"titleField": "label",
 			"admin": { "listColumns": ["expires_at", "pinned_order"] },
 			"fields": [
 				{
-					"slug": "title",
-					"label": "Title",
+					"slug": "label",
+					"label": "Label",
 					"type": "string",
 					"required": true,
 					"validation": { "maxLength": 120 }
@@ -65,11 +65,11 @@
 			"sortOrder": 2,
 			"routable": false,
 			"supports": ["drafts", "revisions", "scheduling"],
-			"titleField": "title",
+			"titleField": "headline",
 			"admin": { "listColumns": ["theme", "expires_at", "pinned_order"] },
 			"fields": [
 				{
-					"slug": "title",
+					"slug": "headline",
 					"label": "Headline",
 					"type": "string",
 					"required": true,

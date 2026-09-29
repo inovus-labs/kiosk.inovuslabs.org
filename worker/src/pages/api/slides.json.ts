@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		...images.entries.map(({ data }) => ({
 			id: data.id,
 			type: "image" as const,
-			title: data.title,
+			title: data.label,
 			body: null,
 			theme: null,
 			imageUrl: mediaUrl(data.image),
@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		...texts.entries.map(({ data }) => ({
 			id: data.id,
 			type: "text" as const,
-			title: data.title,
+			title: data.headline,
 			body: data.body ?? null,
 			theme: data.theme ?? null,
 			imageUrl: null,
