@@ -27,14 +27,14 @@
 			"fields": [
 				{
 					"slug": "title",
-					"label": "Title (internal label, not shown on screen)",
+					"label": "Title",
 					"type": "string",
 					"required": true,
 					"validation": { "maxLength": 120 }
 				},
 				{
 					"slug": "image",
-					"label": "Poster image (1080 × 1920 portrait)",
+					"label": "Poster image",
 					"type": "image",
 					"required": true,
 					"validation": {
@@ -43,13 +43,13 @@
 				},
 				{
 					"slug": "expires_at",
-					"label": "Expires at (auto-unpublish; leave empty to keep)",
+					"label": "Expires at",
 					"type": "datetime",
 					"indexed": true
 				},
 				{
 					"slug": "pinned_order",
-					"label": "Pinned order (lower = shown first; empty = newest first)",
+					"label": "Pinned order",
 					"type": "integer",
 					"indexed": true
 				}
@@ -83,19 +83,19 @@
 				},
 				{
 					"slug": "theme",
-					"label": "Theme (Midnight if left empty)",
+					"label": "Theme",
 					"type": "select",
 					"validation": { "options": ["midnight", "slate", "emerald", "bordeaux"] }
 				},
 				{
 					"slug": "expires_at",
-					"label": "Expires at (auto-unpublish; leave empty to keep)",
+					"label": "Expires at",
 					"type": "datetime",
 					"indexed": true
 				},
 				{
 					"slug": "pinned_order",
-					"label": "Pinned order (lower = shown first; empty = newest first)",
+					"label": "Pinned order",
 					"type": "integer",
 					"indexed": true
 				}
