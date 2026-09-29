@@ -156,7 +156,8 @@ The content model lives in [`seed/seed.json`](worker/seed/seed.json) and is appl
 
 ```bash
 bun install
-bunx emdash secrets generate --write .env   # once; also add WEBHOOK_SECRET and GH_TOKEN to .env
+bunx emdash secrets generate --write .env   # once; also add WEBHOOK_SECRET, GH_TOKEN and
+                                             # EMDASH_SITE_URL=http://localhost:4321 to .env
 bun run dev                                  # admin at http://localhost:4321/_emdash/admin
 ```
 

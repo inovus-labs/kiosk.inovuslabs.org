@@ -17,6 +17,8 @@
     "logs": { "enabled": true, "invocation_logs": true },
   },
   "vars": {
+    // Public origin for passkeys, CSRF and setup. Local dev overrides it in .env.
+    "EMDASH_SITE_URL": "https://kiosk-cms.inovuslabs.org",
     "GITHUB_REPO": "inovus-labs/kiosk.inovuslabs.org",
     "GHOST_DISPATCH_EVENT_TYPE": "ghost-publish",
     "CMS_DISPATCH_EVENT_TYPE": "cms-publish",
