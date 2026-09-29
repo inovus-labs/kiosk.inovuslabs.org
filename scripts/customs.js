@@ -1,3 +1,5 @@
+import fs   from 'fs';
+import path from 'path';
 import { esc, hasMalayalam } from './utils.js';
 import config from '../config.json' with { type: 'json' };
 
@@ -6,39 +8,39 @@ const DEFAULT_ACCENT = '#6C63FF';
 
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 
-export async function fetchCustomSlides() {
+// Live slides, already filtered (published, not expired) and ordered
+// (pinned first, then newest) by the kiosk-worker's /api/slides.json.
+export async function fetchCustomSlides(outDir) {
   if (!CMS_API_URL) return [];
 
-  const now = new Date();
-  // +90s look-ahead: the build itself takes 60–120s, so a slide whose publishAt
-  // falls inside that window should still be picked up by this build.
-  const nowPlus90s = new Date(now.getTime() + 90_000).toISOString();
-  const nowIso = now.toISOString();
-
-  const params = new URLSearchParams();
-  params.set('where[status][equals]', 'published');
-  params.set('where[publishAt][less_than_equal]', nowPlus90s);
-  params.set('where[or][0][expiresAt][exists]', 'false');
-  params.set('where[or][1][expiresAt][greater_than]', nowIso);
-  params.set('sort', 'pinnedOrder,-publishAt');
-  // depth=1 needed to populate media.url; user-object fields are blocked at the
-  // Users collection's access.read, not here.
-  params.set('depth', '1');
-  params.set('limit', String(CMS_LIMIT || 10));
-
-  const url = `${CMS_API_URL}/api/slides?${params.toString()}`;
-  const res = await fetch(url);
+  const res = await fetch(`${CMS_API_URL}/api/slides.json?limit=${CMS_LIMIT || 10}`);
   if (!res.ok) {
-    throw new Error(`Payload /api/slides returned ${res.status}`);
+    throw new Error(`CMS /api/slides.json returned ${res.status}`);
   }
-  const data = await res.json();
-  return data.docs || [];
+  const { slides } = await res.json();
+  return Promise.all(slides.map(slide => bundleImage(slide, outDir)));
+}
+
+// Copy poster images into out/media/ so the deployed kiosk never depends on the CMS being up.
+async function bundleImage(slide, outDir) {
+  if (!slide.imageUrl) return slide;
+  try {
+    const res = await fetch(slide.imageUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const name = path.basename(new URL(slide.imageUrl).pathname);
+    fs.mkdirSync(path.join(outDir, 'media'), { recursive: true });
+    fs.writeFileSync(path.join(outDir, 'media', name), Buffer.from(await res.arrayBuffer()));
+    return { ...slide, imageUrl: `media/${name}` };
+  } catch (e) {
+    console.warn(`Image download failed for "${slide.title}", using remote URL:`, e.message);
+    return slide;
+  }
 }
 
 // ─── Slide ────────────────────────────────────────────────────────────────────
 
 export function buildImageSlide(slide, index) {
-  const mediaUrl = slide.media?.url;
+  const mediaUrl = slide.imageUrl;
   if (!mediaUrl) {
     return buildTextSlide({ ...slide, type: 'text' }, index);
   }

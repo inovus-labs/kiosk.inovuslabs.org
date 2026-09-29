@@ -122,7 +122,7 @@ async function main() {
   if (config.cms.enable && config.cms.apiUrl) {
     console.log('Fetching custom CMS slides\u2026');
     try {
-      customs = await fetchCustomSlides();
+      customs = await fetchCustomSlides(OUT_DIR);
       console.log(`Fetched ${customs.length} custom slide(s)`);
     } catch (e) {
       console.warn('Custom CMS fetch failed:', e.message);
@@ -156,7 +156,7 @@ async function main() {
     console.log('Podcasts disabled in config.json, skipping');
   }
 
-  // Custom slides arrive pre-sorted from Payload (pinnedOrder asc, publishAt desc).
+  // Custom slides arrive pre-sorted from the CMS (pinned first, then newest).
   const customItems  = customs.map(c => ({ ...c, _type: 'custom' }));
   const blogItems    = posts.map(p => ({ ...p, _type: 'blog',    _date: new Date(p.published_at) }))
                             .sort((a, b) => b._date - a._date);
