@@ -4,6 +4,7 @@
   "main": "./src/worker.ts",
   "compatibility_date": "2026-02-24",
   "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "kiosk-cms.inovuslabs.org", "custom_domain": true }],
   "d1_databases": [
     { "binding": "DB", "database_name": "kiosk-db", "database_id": "2d0cac8b-b502-4457-a838-decaa66d731e" },
   ],
