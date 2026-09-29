@@ -15,5 +15,10 @@
   "observability": {
     "logs": { "enabled": true, "invocation_logs": true },
   },
-  // Secrets via `wrangler secret put`: EMDASH_ENCRYPTION_KEY
+  "vars": {
+    "GITHUB_REPO": "inovus-labs/kiosk.inovuslabs.org",
+    "GHOST_DISPATCH_EVENT_TYPE": "ghost-publish",
+    "CMS_DISPATCH_EVENT_TYPE": "cms-publish",
+  },
+  // Secrets via `wrangler secret put`: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN
 }
