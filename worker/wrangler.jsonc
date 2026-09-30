@@ -4,7 +4,13 @@
   "main": "./src/worker.ts",
   "compatibility_date": "2026-02-24",
   "compatibility_flags": ["nodejs_compat"],
-  "routes": [{ "pattern": "kiosk-cms.inovuslabs.org", "custom_domain": true }],
+  "routes": [
+    { "pattern": "kiosk-cms.inovuslabs.org", "custom_domain": true },
+    // Ghost social web (ActivityPub) paths, proxied by src/lib/activitypub.ts.
+    { "pattern": "blog.inovuslabs.org/.ghost/activitypub/*", "zone_name": "inovuslabs.org" },
+    { "pattern": "blog.inovuslabs.org/.well-known/webfinger*", "zone_name": "inovuslabs.org" },
+    { "pattern": "blog.inovuslabs.org/.well-known/nodeinfo*", "zone_name": "inovuslabs.org" },
+  ],
   "d1_databases": [
     { "binding": "DB", "database_name": "kiosk-db", "database_id": "2d0cac8b-b502-4457-a838-decaa66d731e" },
   ],
@@ -22,6 +28,8 @@
     "GITHUB_REPO": "inovus-labs/kiosk.inovuslabs.org",
     "GHOST_DISPATCH_EVENT_TYPE": "ghost-publish",
     "CMS_DISPATCH_EVENT_TYPE": "cms-publish",
+    "GHOST_BLOG_HOST": "blog.inovuslabs.org",
+    "ACTIVITYPUB_TARGET": "https://ap.ghost.org",
   },
   // Secrets via `wrangler secret put`: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN
 }
