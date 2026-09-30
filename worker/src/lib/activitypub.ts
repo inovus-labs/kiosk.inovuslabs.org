@@ -5,7 +5,10 @@ export function proxyActivityPub(request: Request, target: string): Promise<Resp
 	headers.set("X-Forwarded-Host", url.host);
 	headers.set("X-Forwarded-Proto", "https");
 
-	return fetch(new URL(url.pathname + url.search, target), {
+	// Breaks a redirect loop with browsers' cached Ghost trailing-slash 301s.
+	const path = url.pathname.replace(/(.)\/+$/, "$1");
+
+	return fetch(new URL(path + url.search, target), {
 		method: request.method,
 		headers,
 		body: request.body,
