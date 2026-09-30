@@ -10,6 +10,8 @@
     { "pattern": "blog.inovuslabs.org/.ghost/activitypub/*", "zone_name": "inovuslabs.org" },
     { "pattern": "blog.inovuslabs.org/.well-known/webfinger*", "zone_name": "inovuslabs.org" },
     { "pattern": "blog.inovuslabs.org/.well-known/nodeinfo*", "zone_name": "inovuslabs.org" },
+    // Blog's social web handle domain (@blog@inovuslabs.org), redirected to the blog.
+    { "pattern": "inovuslabs.org/.well-known/webfinger*", "zone_name": "inovuslabs.org" },
   ],
   "d1_databases": [
     { "binding": "DB", "database_name": "kiosk-db", "database_id": "2d0cac8b-b502-4457-a838-decaa66d731e" },
@@ -30,6 +32,7 @@
     "CMS_DISPATCH_EVENT_TYPE": "cms-publish",
     "GHOST_BLOG_HOST": "blog.inovuslabs.org",
     "ACTIVITYPUB_TARGET": "https://ap.ghost.org",
+    "SOCIAL_WEB_DOMAIN": "inovuslabs.org",
   },
   // Secrets via `wrangler secret put`: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN
 }

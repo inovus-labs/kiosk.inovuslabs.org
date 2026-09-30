@@ -9,8 +9,12 @@ const emdashScheduled = createScheduledHandler();
 export default {
 	...handler,
 	fetch(request, env, ctx) {
-		if (new URL(request.url).hostname === env.GHOST_BLOG_HOST) {
+		const url = new URL(request.url);
+		if (url.hostname === env.GHOST_BLOG_HOST) {
 			return proxyActivityPub(request, env.ACTIVITYPUB_TARGET);
+		}
+		if (url.hostname === env.SOCIAL_WEB_DOMAIN) {
+			return Response.redirect(`https://${env.GHOST_BLOG_HOST}${url.pathname}${url.search}`, 302);
 		}
 		return handler.fetch!(request, env, ctx);
 	},
