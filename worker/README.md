@@ -1,4 +1,4 @@
-# Kiosk Worker — EmDash CMS, Ghost bridges + Discord feeds
+# Kiosk Worker — EmDash CMS, Ghost bridges + Blog RSS → Discord
 
 This directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker at **[kiosk-cms.inovuslabs.org](https://kiosk-cms.inovuslabs.org)**, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](wrangler.jsonc). It's part of the [kiosk display](../README.md) and serves six purposes:
 
@@ -7,7 +7,7 @@ This directory is an [EmDash](https://emdashcms.com/) site (Astro, server-render
 3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
 4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
 5. **Ghost social web proxy** ([`src/lib/activitypub.ts`](src/lib/activitypub.ts)) — Cloudflare routes send the blog's ActivityPub paths to Ghost's hosted ActivityPub service. See [Ghost social web](#ghost-social-web).
-6. **Feeds plugin** ([`src/plugins/feeds/`](src/plugins/feeds/)) — announces new posts from an admin-only list of RSS/Atom feeds to a Discord channel. See [Discord feeds](#discord-feeds).
+6. **Blog RSS → Discord** ([`src/plugins/feeds/`](src/plugins/feeds/)) — posts new posts from public blogs we follow by RSS/Atom to a Discord channel. See [Blog RSS → Discord](#blog-rss--discord).
 
 The content model lives in [`seed/seed.json`](seed/seed.json) and is applied on first boot; there are no migration files to maintain. To change it on a live site, see [Evolving a deployed site](https://docs.emdashcms.com/deployment/schema-evolution/).
 
@@ -89,9 +89,9 @@ Blog pages themselves never touch the worker; only the routes above do.
 
 New posts reach both automatically; Bluesky follows a few minutes behind.
 
-## Discord feeds
+## Blog RSS → Discord
 
-Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time. Each feed gets its own embed colour when it's added. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+Followed blogs are managed on the **Blog RSS → Discord** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time. Each feed gets its own embed colour when it's added. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
 ```mermaid
 flowchart TD
@@ -107,7 +107,7 @@ flowchart TD
     %% ── Delivery ────────────────────────────────
     D[Discord channel<br/>webhook]:::discord
 
-    U -->|Discord feeds<br/>admin page| W
+    U -->|Blog RSS → Discord<br/>admin page| W
     CR --> W
     W -->|Fetch| F
     W <-->|Feed list ·<br/>seen post IDs| KV
@@ -124,7 +124,7 @@ The page shows each feed's status (Active or Failing), when it last announced a 
 - **Add a feed** — paste its URL (the name defaults to the feed's title). It's fetched first, so typos and pages that aren't feeds are rejected. Its latest post is announced on the next poll, then every new post after it.
 - **Edit** — change a feed's name or URL. A new URL counts as a new feed: its latest post is announced once.
 - **Remove** — asks for confirmation. Adding the same URL back later doesn't repost what was already announced.
-- **Check feeds now** — polls immediately instead of waiting for the cron.
+- **Check for new posts** — polls immediately instead of waiting for the cron.
 
 Posted entries are remembered per feed URL in the plugin's KV. A failed Discord post is retried on the next poll; a 429 rate limit ends the poll early and resumes on the next one.
 
@@ -133,5 +133,5 @@ Feeds are requested with their saved `ETag` / `Last-Modified`, so an unchanged f
 **Setup:**
 
 1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
-2. In the admin, open the **Feeds** plugin's settings (or **Webhook settings** on the Discord feeds page) and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
-3. Add feeds on the **Discord feeds** page.
+2. In the admin, open the **Feeds** plugin's settings (or **Webhook settings** on the Blog RSS → Discord page) and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
+3. Add blogs on the **Blog RSS → Discord** page.

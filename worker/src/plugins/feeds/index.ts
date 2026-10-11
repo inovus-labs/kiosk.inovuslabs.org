@@ -13,12 +13,12 @@ export function createPlugin() {
 			feeds: { indexes: ["name"], uniqueIndexes: ["url"] },
 		},
 		admin: {
-			pages: [{ path: PAGE_PATH, label: "Discord feeds", icon: "rss" }],
+			pages: [{ path: PAGE_PATH, label: "Blog RSS → Discord", icon: "rss" }],
 			settingsSchema: {
 				webhookUrl: {
 					type: "secret",
 					label: "Discord webhook URL",
-					description: "Channel webhook that new feed posts are announced to.",
+					description: "Webhook of the Discord channel that new blog posts are posted to.",
 				},
 			},
 		},
@@ -32,7 +32,7 @@ export function createPlugin() {
 					let result: Awaited<ReturnType<typeof handleInteraction>>;
 					try {
 						if (!isAdmin && interaction.type !== "page_load") {
-							throw new Error("Only admins can change feeds");
+							throw new Error("Only admins can change the blog list");
 						}
 						result = await handleInteraction(ctx, interaction);
 					} catch (error) {

@@ -12,10 +12,10 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 	const hasWebhook = Boolean(await ctx.settings.get<string>("webhookUrl"));
 
 	const blocks: Block[] = [
-		{ type: "header", text: "Discord feeds" },
+		{ type: "header", text: "Blog RSS → Discord" },
 		{
 			type: "context",
-			text: "New posts from these feeds are announced on Discord every 10 minutes. A newly added feed announces its latest post first.",
+			text: "Public blogs we follow by RSS. Their new posts are posted to #rss-feeds on Discord every 10 minutes. A newly added blog posts its latest entry first.",
 		},
 	];
 	if (isAdmin && !hasWebhook) {
@@ -23,13 +23,13 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 			type: "banner",
 			variant: "alert",
 			title: "No Discord webhook set",
-			description: "Nothing is announced until a webhook URL is added in the plugin settings.",
+			description: "Nothing is posted until a webhook URL is added in the plugin settings.",
 		});
 	}
 	blocks.push({
 		type: "stats",
 		items: [
-			{ label: "Feeds", value: feeds.length },
+			{ label: "Blogs", value: feeds.length },
 			{ label: "Failing", value: failing.length, trend: failing.length > 0 ? "down" : "neutral" },
 		],
 	});
@@ -37,18 +37,18 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 		blocks.push(
 			{
 				type: "context",
-				text: `Editing ${edited.data.name}. A new URL counts as a new feed: its latest post is announced once.`,
+				text: `Editing ${edited.data.name}. A new RSS URL counts as a new blog: its latest post is posted once.`,
 			},
 			{
 				type: "form",
 				block_id: `edit:${edited.id}`,
 				fields: [
-					{ type: "text_input", action_id: "url", label: "Feed URL", initial_value: edited.data.url },
+					{ type: "text_input", action_id: "url", label: "RSS feed URL", initial_value: edited.data.url },
 					{
 						type: "text_input",
 						action_id: "name",
 						label: "Name",
-						placeholder: "Defaults to the feed's title",
+						placeholder: "Defaults to the blog's title",
 						initial_value: edited.data.name,
 					},
 				],
@@ -64,17 +64,17 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 			type: "form",
 			block_id: "add",
 			fields: [
-				{ type: "text_input", action_id: "url", label: "Feed URL", placeholder: "https://example.com/feed.xml" },
-				{ type: "text_input", action_id: "name", label: "Name", placeholder: "Defaults to the feed's title" },
+				{ type: "text_input", action_id: "url", label: "RSS feed URL", placeholder: "https://example.com/feed.xml" },
+				{ type: "text_input", action_id: "name", label: "Name", placeholder: "Defaults to the blog's title" },
 			],
-			submit: { label: "Add feed", action_id: "add" },
+			submit: { label: "Add blog", action_id: "add" },
 		});
 	}
 	if (failing.length > 0) {
 		blocks.push({
 			type: "banner",
 			variant: "error",
-			title: `${failing.length} feed${failing.length === 1 ? "" : "s"} failing`,
+			title: `${failing.length} blog${failing.length === 1 ? "" : "s"} failing`,
 			description: failing.map(({ data }) => `${data.name}: ${data.lastError}`).join("\n"),
 		});
 	}
@@ -82,12 +82,12 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 		type: "table",
 		block_id: "feeds",
 		page_action_id: "feeds_page",
-		empty_text: isAdmin ? "No feeds yet. Add one above." : "No feeds yet.",
+		empty_text: isAdmin ? "No blogs yet. Add one above." : "No blogs yet.",
 		columns: [
 			{ key: "name", label: "Name" },
-			{ key: "url", label: "Feed URL", format: "code" },
+			{ key: "url", label: "RSS feed URL", format: "code" },
 			{ key: "status", label: "Status", format: "badge" },
-			{ key: "lastPostAt", label: "Last announced", format: "relative_time" },
+			{ key: "lastPostAt", label: "Last posted", format: "relative_time" },
 			{ key: "lastPostTitle", label: "Last post" },
 			...(isAdmin
 				? ([
@@ -112,7 +112,7 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 					value: id,
 					confirm: {
 						title: `Remove ${data.name}?`,
-						text: "Its posts stop being announced. Adding it back later won't repost what was already announced.",
+						text: "Its new posts stop going to Discord. Adding it back later won't repost what was already posted.",
 						confirm: "Remove",
 						deny: "Cancel",
 						style: "danger",
@@ -125,7 +125,7 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 		blocks.push({
 			type: "actions",
 			elements: [
-				{ type: "button", action_id: "poll", label: "Check feeds now", style: "primary" },
+				{ type: "button", action_id: "poll", label: "Check for new posts", style: "primary" },
 				{
 					type: "link",
 					label: "Webhook settings",
@@ -164,7 +164,7 @@ export async function handleInteraction(
 	if (interaction.action_id === "remove") {
 		const record = await feedStore(ctx).get(id);
 		await feedStore(ctx).delete(id);
-		return { toast: { message: `Removed ${record?.name ?? "feed"}`, type: "success" } };
+		return { toast: { message: `Removed ${record?.name ?? "blog"}`, type: "success" } };
 	}
 	if (interaction.action_id === "poll") {
 		if (!(await ctx.settings.get<string>("webhookUrl"))) {
@@ -173,7 +173,7 @@ export async function handleInteraction(
 		const announced = await pollAll(ctx);
 		return {
 			toast: {
-				message: announced > 0 ? `Announced ${announced} new post${announced === 1 ? "" : "s"}` : "No new posts",
+				message: announced > 0 ? `Posted ${announced} new post${announced === 1 ? "" : "s"} to Discord` : "No new posts",
 				type: "info",
 			},
 		};

@@ -13,7 +13,7 @@ const kioskPlugin = {
 	entrypoint: fileURLToPath(new URL("./src/plugins/kiosk.ts", import.meta.url)),
 };
 
-// In-repo native plugin: Discord feed announcements (src/plugins/feeds/index.ts).
+// In-repo native plugin: Blog RSS → Discord (src/plugins/feeds/index.ts).
 const feedsPlugin = {
 	id: "feeds",
 	version: "1.0.0",

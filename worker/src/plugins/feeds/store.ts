@@ -75,7 +75,7 @@ export async function addFeed(ctx: PluginContext, name: string, url: string) {
 
 export async function editFeed(ctx: PluginContext, id: string, name: string, url: string) {
 	const record = await feedStore(ctx).get(id);
-	if (!record) throw new Error("That feed no longer exists");
+	if (!record) throw new Error("That blog no longer exists");
 	const sameUrl = absoluteUrl(url.trim(), "about:blank") === record.url;
 	const href = sameUrl ? record.url : await newFeedUrl(ctx, url);
 	const title = sameUrl && name.trim() ? "" : await feedTitle(href);
