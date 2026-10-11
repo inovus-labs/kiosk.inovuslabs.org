@@ -91,7 +91,7 @@ New posts reach both automatically; Bluesky follows a few minutes behind.
 
 ## Discord feeds
 
-Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. The page and the plugin's settings both need the Admin role, so Editors and other lab members never see them (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each active feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time, in the logo's blue. Posts come from **Inovus Radar** with the Inovus Labs logo as its avatar; both can be changed in the plugin's settings. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. The page and the plugin's settings both need the Admin role, so Editors and other lab members never see them (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each active feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time, in the logo's blue. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
 ```mermaid
 flowchart TD
@@ -132,5 +132,5 @@ Posted entries are remembered per feed URL in the plugin's KV. A failed Discord 
 **Setup:**
 
 1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
-2. In the admin, open the **Feeds** plugin's settings (or **Webhook & bot settings** on the Discord feeds page) and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`. **Bot name** and **Bot avatar URL** are optional.
+2. In the admin, open the **Feeds** plugin's settings (or **Webhook settings** on the Discord feeds page) and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
 3. Add feeds on the **Discord feeds** page. A list saved in the earlier **Feeds** textarea setting is moved into the table automatically (lines starting with `#` come in paused).

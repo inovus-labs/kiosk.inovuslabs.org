@@ -9,8 +9,6 @@ const MAX_NEW_PER_FEED = 5;
 const SUMMARY_LENGTH = 300;
 const WORDS_PER_MINUTE = 225;
 const EMBED_COLOR = 0x499fbf;
-const DEFAULT_BOT_NAME = "Inovus Radar";
-const DEFAULT_BOT_AVATAR = "https://inovuslabs.org/apple-touch-icon.png";
 
 const parser = new XMLParser({
 	ignoreAttributes: false,
@@ -170,26 +168,24 @@ function parseFeed(xml: string): Feed {
 	};
 }
 
-interface Bot {
-	webhookUrl: string;
-	username: string;
-	avatarUrl: string;
-}
-
 // Discord can't show .ico favicons; Google's service returns a PNG.
 const faviconOf = (site: string) =>
 	`https://www.google.com/s2/favicons?sz=128&domain=${new URL(site).hostname}`;
 
-async function announce(ctx: PluginContext, bot: Bot, feed: Feed, feedName: string, item: FeedItem) {
+async function announce(
+	ctx: PluginContext,
+	webhookUrl: string,
+	feed: Feed,
+	feedName: string,
+	item: FeedItem,
+) {
 	const footer = [item.author, readingTime(item.content)].filter(Boolean).join(" · ");
-	const target = new URL(bot.webhookUrl);
+	const target = new URL(webhookUrl);
 	target.searchParams.set("wait", "true");
 	const res = await ctx.http!.fetch(target.href, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
-			username: bot.username,
-			avatar_url: bot.avatarUrl,
 			embeds: [
 				{
 					color: EMBED_COLOR,
@@ -260,7 +256,7 @@ async function fetchFeed(ctx: PluginContext, url: string): Promise<Feed> {
 	};
 }
 
-async function pollFeed(ctx: PluginContext, bot: Bot, record: FeedRecord): Promise<FeedItem[]> {
+async function pollFeed(ctx: PluginContext, webhookUrl: string, record: FeedRecord): Promise<FeedItem[]> {
 	const feed = await fetchFeed(ctx, record.url);
 	const key = `seen:${record.url}`;
 	const previous = await ctx.kv.get<string[]>(key);
@@ -273,7 +269,7 @@ async function pollFeed(ctx: PluginContext, bot: Bot, record: FeedRecord): Promi
 	let failure: unknown;
 	for (const [i, item] of toAnnounce.entries()) {
 		try {
-			await announce(ctx, bot, feed, record.name, item);
+			await announce(ctx, webhookUrl, feed, record.name, item);
 			announced.push(item);
 		} catch (error) {
 			if (error instanceof Rejected) {
@@ -297,19 +293,9 @@ async function pollFeed(ctx: PluginContext, bot: Bot, record: FeedRecord): Promi
 	return announced;
 }
 
-async function loadBot(ctx: PluginContext): Promise<Bot | null> {
-	const webhookUrl = await ctx.settings.get<string>("webhookUrl");
-	if (!webhookUrl) return null;
-	return {
-		webhookUrl,
-		username: (await ctx.settings.get<string>("botName")) || DEFAULT_BOT_NAME,
-		avatarUrl: (await ctx.settings.get<string>("botAvatarUrl")) || DEFAULT_BOT_AVATAR,
-	};
-}
-
 async function pollAll(ctx: PluginContext): Promise<Record<string, string[]>> {
-	const bot = await loadBot(ctx);
-	if (!bot) {
+	const webhookUrl = await ctx.settings.get<string>("webhookUrl");
+	if (!webhookUrl) {
 		ctx.log.warn("No Discord webhook URL set; skipping feed poll");
 		return {};
 	}
@@ -319,7 +305,7 @@ async function pollAll(ctx: PluginContext): Promise<Record<string, string[]>> {
 		if (!data.enabled) continue;
 		let update: Partial<FeedRecord> | undefined;
 		try {
-			const posts = await pollFeed(ctx, bot, data);
+			const posts = await pollFeed(ctx, webhookUrl, data);
 			if (posts.length > 0) {
 				const latest = posts[posts.length - 1]!;
 				announced[data.name] = posts.map((post) => post.title);
@@ -514,7 +500,7 @@ async function renderPage(ctx: PluginContext): Promise<Block[]> {
 				{ type: "button", action_id: "poll", label: "Check feeds now", style: "primary" },
 				{
 					type: "link",
-					label: "Webhook & bot settings",
+					label: "Webhook settings",
 					target: { kind: "plugin-settings" },
 					appearance: "secondary",
 				},
@@ -584,18 +570,6 @@ export function createPlugin() {
 					type: "secret",
 					label: "Discord webhook URL",
 					description: "Channel webhook that new feed posts are announced to.",
-				},
-				botName: {
-					type: "string",
-					label: "Bot name",
-					description: `Name the posts appear under. Defaults to ${DEFAULT_BOT_NAME}.`,
-					default: DEFAULT_BOT_NAME,
-				},
-				botAvatarUrl: {
-					type: "url",
-					label: "Bot avatar URL",
-					description: "PNG, JPEG or GIF (not SVG). Defaults to the Inovus Labs logo.",
-					default: DEFAULT_BOT_AVATAR,
 				},
 			},
 		},
