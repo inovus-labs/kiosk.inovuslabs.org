@@ -6,6 +6,20 @@ export { PluginBridge };
 
 const emdashScheduled = createScheduledHandler();
 
+function runPluginRoute(ctx: ExecutionContext, pluginId: string, path: string) {
+	ctx.waitUntil(
+		withEmDashRuntime(async (runtime) => {
+			const result = await runtime.handlePluginApiRoute(
+				pluginId,
+				"POST",
+				path,
+				new Request("https://internal/", { method: "POST" }),
+			);
+			if (!result.success) console.error(`[${pluginId}] ${path} failed:`, result.error);
+		}).catch((error) => console.error(`[${pluginId}] ${path} threw:`, error)),
+	);
+}
+
 export default {
 	...handler,
 	fetch(request, env, ctx) {
@@ -22,16 +36,6 @@ export default {
 	// Both paths end in the kiosk plugin's hooks, which dispatch the GitHub rebuild.
 	async scheduled(controller, env, ctx) {
 		await emdashScheduled(controller, env, ctx);
-		ctx.waitUntil(
-			withEmDashRuntime(async (runtime) => {
-				const result = await runtime.handlePluginApiRoute(
-					"kiosk",
-					"POST",
-					"/expire",
-					new Request("https://internal/", { method: "POST" }),
-				);
-				if (!result.success) console.error("[kiosk] expire sweep failed:", result.error);
-			}).catch((error) => console.error("[kiosk] expire sweep threw:", error)),
-		);
+		runPluginRoute(ctx, "kiosk", "/expire");
 	},
 } satisfies ExportedHandler<Env>;
