@@ -328,11 +328,14 @@ async function pollAll(ctx: PluginContext): Promise<Record<string, string[]>> {
 	return announced;
 }
 
-async function addFeed(ctx: PluginContext, name: string, url: string, enabled = true) {
+async function newFeedUrl(ctx: PluginContext, url: string): Promise<string> {
 	const href = absoluteUrl(url.trim(), "about:blank");
 	if (!href) throw new Error(`Not a valid http(s) URL: ${url}`);
 	if ((await feedStore(ctx).count({ url: href })) > 0) throw new Error(`Already added: ${href}`);
+	return href;
+}
 
+async function feedTitle(ctx: PluginContext, href: string): Promise<string> {
 	let feed: Feed;
 	try {
 		feed = await fetchFeed(ctx, href);
@@ -342,14 +345,33 @@ async function addFeed(ctx: PluginContext, name: string, url: string, enabled = 
 	if (!feed.title && feed.items.length === 0) {
 		throw new Error(`${href} doesn't look like an RSS or Atom feed`);
 	}
+	return feed.title || new URL(href).hostname;
+}
+
+async function addFeed(ctx: PluginContext, name: string, url: string, enabled = true) {
+	const href = await newFeedUrl(ctx, url);
+	const title = await feedTitle(ctx, href);
 	const record: FeedRecord = {
-		name: name.trim() || feed.title || new URL(href).hostname,
+		name: name.trim() || title,
 		url: href,
 		enabled,
 		createdAt: new Date().toISOString(),
 	};
 	await feedStore(ctx).put(crypto.randomUUID(), record);
 	return record;
+}
+
+async function editFeed(ctx: PluginContext, id: string, name: string, url: string) {
+	const record = await feedStore(ctx).get(id);
+	if (!record) throw new Error("That feed no longer exists");
+	const sameUrl = absoluteUrl(url.trim(), "about:blank") === record.url;
+	const href = sameUrl ? record.url : await newFeedUrl(ctx, url);
+	const title = sameUrl && name.trim() ? "" : await feedTitle(ctx, href);
+	const updated: FeedRecord = sameUrl
+		? { ...record, name: name.trim() || title }
+		: { name: name.trim() || title, url: href, enabled: record.enabled, createdAt: record.createdAt };
+	await feedStore(ctx).put(id, updated);
+	return updated;
 }
 
 async function importLegacyList(ctx: PluginContext) {
@@ -373,8 +395,9 @@ async function importLegacyList(ctx: PluginContext) {
 
 const PAGE_PATH = "/feeds";
 
-async function renderPage(ctx: PluginContext): Promise<Block[]> {
+async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]> {
 	const feeds = await listFeeds(ctx);
+	const edited = feeds.find(({ id }) => id === editing);
 	const failing = feeds.filter(({ data }) => data.enabled && data.lastError);
 	const active = feeds.filter(({ data }) => data.enabled).length;
 	const hasWebhook = Boolean(await ctx.settings.get<string>("webhookUrl"));
@@ -404,7 +427,35 @@ async function renderPage(ctx: PluginContext): Promise<Block[]> {
 				{ label: "Failing", value: failing.length, trend: failing.length > 0 ? "down" : "neutral" },
 			],
 		},
-		{
+	);
+	if (edited) {
+		blocks.push(
+			{
+				type: "context",
+				text: `Editing ${edited.data.name}. A new URL counts as a new feed: its latest post is announced once.`,
+			},
+			{
+				type: "form",
+				block_id: `edit:${edited.id}`,
+				fields: [
+					{ type: "text_input", action_id: "url", label: "Feed URL", initial_value: edited.data.url },
+					{
+						type: "text_input",
+						action_id: "name",
+						label: "Name",
+						placeholder: "Defaults to the feed's title",
+						initial_value: edited.data.name,
+					},
+				],
+				submit: { label: "Save", action_id: "save" },
+			},
+			{
+				type: "actions",
+				elements: [{ type: "button", action_id: "cancel", label: "Cancel", style: "secondary" }],
+			},
+		);
+	} else {
+		blocks.push({
 			type: "form",
 			block_id: "add",
 			fields: [
@@ -412,8 +463,8 @@ async function renderPage(ctx: PluginContext): Promise<Block[]> {
 				{ type: "text_input", action_id: "name", label: "Name", placeholder: "Defaults to the feed's title" },
 			],
 			submit: { label: "Add feed", action_id: "add" },
-		},
-	);
+		});
+	}
 	if (failing.length > 0) {
 		blocks.push({
 			type: "banner",
@@ -434,6 +485,7 @@ async function renderPage(ctx: PluginContext): Promise<Block[]> {
 				{ key: "status", label: "Status", format: "badge" },
 				{ key: "lastPostAt", label: "Last announced", format: "relative_time" },
 				{ key: "lastPostTitle", label: "Last post" },
+				{ key: "edit", label: "", format: "element" },
 				{ key: "toggle", label: "", format: "element" },
 				{ key: "remove", label: "", format: "element" },
 			],
@@ -443,6 +495,7 @@ async function renderPage(ctx: PluginContext): Promise<Block[]> {
 				status: !data.enabled ? "Paused" : data.lastError ? "Failing" : "Active",
 				lastPostAt: data.lastPostAt ?? "",
 				lastPostTitle: data.lastPostTitle ?? "—",
+				edit: { type: "button", action_id: "edit", label: "Edit", style: "secondary", value: id },
 				toggle: {
 					type: "button",
 					action_id: "toggle",
@@ -482,28 +535,39 @@ async function renderPage(ctx: PluginContext): Promise<Block[]> {
 	return blocks;
 }
 
+const editedId = (interaction: BlockInteraction) =>
+	interaction.type === "form_submit" && interaction.action_id === "save"
+		? interaction.block_id?.replace(/^edit:/, "")
+		: undefined;
+
 async function handleInteraction(
 	ctx: PluginContext,
 	interaction: BlockInteraction,
-): Promise<BlockResponse["toast"]> {
+): Promise<{ toast?: BlockResponse["toast"]; editing?: string }> {
 	if (interaction.type === "form_submit" && interaction.action_id === "add") {
 		const values = interaction.values as { name?: string; url?: string };
 		const record = await addFeed(ctx, values.name ?? "", values.url ?? "");
-		return { message: `Added ${record.name}`, type: "success" };
+		return { toast: { message: `Added ${record.name}`, type: "success" } };
 	}
-	if (interaction.type !== "block_action") return undefined;
+	if (interaction.type === "form_submit" && interaction.action_id === "save") {
+		const values = interaction.values as { name?: string; url?: string };
+		const record = await editFeed(ctx, editedId(interaction) ?? "", values.name ?? "", values.url ?? "");
+		return { toast: { message: `Saved ${record.name}`, type: "success" } };
+	}
+	if (interaction.type !== "block_action") return {};
 
 	const id = String(interaction.value ?? "");
+	if (interaction.action_id === "edit") return { editing: id };
 	if (interaction.action_id === "toggle") {
 		const record = await feedStore(ctx).get(id);
 		if (!record) throw new Error("That feed no longer exists");
 		await feedStore(ctx).put(id, { ...record, enabled: !record.enabled });
-		return { message: `${record.enabled ? "Paused" : "Resumed"} ${record.name}`, type: "success" };
+		return { toast: { message: `${record.enabled ? "Paused" : "Resumed"} ${record.name}`, type: "success" } };
 	}
 	if (interaction.action_id === "remove") {
 		const record = await feedStore(ctx).get(id);
 		await feedStore(ctx).delete(id);
-		return { message: `Removed ${record?.name ?? "feed"}`, type: "success" };
+		return { toast: { message: `Removed ${record?.name ?? "feed"}`, type: "success" } };
 	}
 	if (interaction.action_id === "poll") {
 		if (!(await ctx.settings.get<string>("webhookUrl"))) {
@@ -511,11 +575,13 @@ async function handleInteraction(
 		}
 		const announced = Object.values(await pollAll(ctx)).flat().length;
 		return {
-			message: announced > 0 ? `Announced ${announced} new post${announced === 1 ? "" : "s"}` : "No new posts",
-			type: "info",
+			toast: {
+				message: announced > 0 ? `Announced ${announced} new post${announced === 1 ? "" : "s"}` : "No new posts",
+				type: "info",
+			},
 		};
 	}
-	return undefined;
+	return {};
 }
 
 export function createPlugin() {
@@ -542,13 +608,17 @@ export function createPlugin() {
 				permission: "plugins:manage",
 				handler: async (ctx) => {
 					await importLegacyList(ctx);
-					let toast: BlockResponse["toast"];
+					const interaction = ctx.input as BlockInteraction;
+					let result: Awaited<ReturnType<typeof handleInteraction>>;
 					try {
-						toast = await handleInteraction(ctx, ctx.input as BlockInteraction);
+						result = await handleInteraction(ctx, interaction);
 					} catch (error) {
-						toast = { message: error instanceof Error ? error.message : String(error), type: "error" };
+						result = {
+							toast: { message: error instanceof Error ? error.message : String(error), type: "error" },
+							editing: editedId(interaction),
+						};
 					}
-					return { blocks: await renderPage(ctx), toast } satisfies BlockResponse;
+					return { blocks: await renderPage(ctx, result.editing), toast: result.toast } satisfies BlockResponse;
 				},
 			},
 			poll: {

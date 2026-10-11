@@ -122,6 +122,7 @@ flowchart TD
 The page shows each feed's status (Active, Paused or Failing), when it last announced a post and which one, and why any failing feed is failing:
 
 - **Add a feed** — paste its URL (the name defaults to the feed's title). It's fetched first, so typos and pages that aren't feeds are rejected. Its latest post is announced on the next poll, then every new post after it.
+- **Edit** — change a feed's name or URL. A new URL counts as a new feed: its latest post is announced once.
 - **Pause / Resume** — posts published while a feed was paused are announced when it resumes (up to 5 at once).
 - **Remove** — asks for confirmation. Adding the same URL back later doesn't repost what was already announced.
 - **Check feeds now** — polls immediately instead of waiting for the cron.
