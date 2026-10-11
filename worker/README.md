@@ -91,7 +91,7 @@ New posts reach both automatically; Bluesky follows a few minutes behind.
 
 ## Discord feeds
 
-The feed list lives in the **Feeds** plugin's settings, which only Admins can open; Editors and other lab members never see it (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each listed feed and posts every new entry to a Discord channel webhook as an embed (title, link, summary, author, cover image). RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+The feed list lives in the **Feeds** plugin's settings, which only Admins can open; Editors and other lab members never see it (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each listed feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time, in the logo's blue. Posts come from **Inovus Radar** with the Inovus Labs logo as its avatar; both can be changed in the plugin's settings. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
 ```mermaid
 flowchart TD
@@ -137,4 +137,4 @@ Posted entries are remembered per feed URL in the plugin's KV. A failed Discord 
 
 1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
 2. In the admin, open the **Feeds** plugin's settings and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
-3. Fill in **Feeds** and save.
+3. Fill in **Feeds** and save. **Bot name** and **Bot avatar URL** are optional.

@@ -6,6 +6,10 @@ const SEEN_LIMIT = 500;
 // Stops a feed that re-keys its GUIDs from flooding the channel.
 const MAX_NEW_PER_FEED = 5;
 const SUMMARY_LENGTH = 300;
+const WORDS_PER_MINUTE = 225;
+const EMBED_COLOR = 0x499fbf;
+const DEFAULT_BOT_NAME = "Inovus Radar";
+const DEFAULT_BOT_AVATAR = "https://inovuslabs.org/apple-touch-icon.png";
 
 const parser = new XMLParser({
 	ignoreAttributes: false,
@@ -22,6 +26,13 @@ interface FeedItem {
 	summary: string;
 	author: string;
 	image?: string;
+	content: string;
+}
+
+interface Feed {
+	title: string;
+	link: string;
+	items: FeedItem[];
 }
 
 class RateLimited extends Error {}
@@ -70,9 +81,29 @@ function decodeEntities(value: string): string {
 	});
 }
 
+const plainText = (html: string) =>
+	decodeEntities(html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+
 function summarize(html: string): string {
-	const plain = decodeEntities(html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
-	return plain.length > SUMMARY_LENGTH ? `${plain.slice(0, SUMMARY_LENGTH - 1).trimEnd()}…` : plain;
+	const plain = plainText(html);
+	if (plain.length <= SUMMARY_LENGTH) return plain;
+	const cut = plain.slice(0, SUMMARY_LENGTH);
+	return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[\s,;:.]+$/, "")}…`;
+}
+
+function readingTime(html: string): string | undefined {
+	const words = plainText(html).split(" ").length;
+	return words >= WORDS_PER_MINUTE / 2
+		? `${Math.max(1, Math.round(words / WORDS_PER_MINUTE))} min read`
+		: undefined;
+}
+
+// Discord can't render SVG.
+function firstImage(html: string): string | undefined {
+	for (const [, src] of html.matchAll(/<img\b[^>]*?\bsrc=["']([^"']+)["']/gi)) {
+		if (!/\.svg(\?|$)/i.test(src)) return decodeEntities(src);
+	}
+	return undefined;
 }
 
 function imageOf(entry: Record<string, unknown>): string | undefined {
@@ -87,17 +118,22 @@ function imageOf(entry: Record<string, unknown>): string | undefined {
 	);
 }
 
-function parseFeed(xml: string): { title: string; items: FeedItem[] } {
+function atomLink(value: unknown): string {
+	const links = list(value as Record<string, unknown>[]);
+	const link = links.find((l) => !l["@_rel"] || l["@_rel"] === "alternate") ?? links[0];
+	return link ? text(link["@_href"]) : "";
+}
+
+function parseFeed(xml: string): Feed {
 	const doc = parser.parse(xml);
 
 	if (doc.feed) {
 		const feed = doc.feed;
 		return {
-			title: text(feed.title),
+			title: decodeEntities(text(feed.title)),
+			link: atomLink(feed.link),
 			items: list<Record<string, unknown>>(feed.entry).map((entry) => {
-				const links = list(entry.link as Record<string, unknown>[]);
-				const link = links.find((l) => !l["@_rel"] || l["@_rel"] === "alternate") ?? links[0];
-				const href = link ? text(link["@_href"]) : "";
+				const href = atomLink(entry.link);
 				return {
 					id: text(entry.id) || href,
 					title: decodeEntities(text(entry.title)),
@@ -106,6 +142,7 @@ function parseFeed(xml: string): { title: string; items: FeedItem[] } {
 					summary: summarize(text(entry.summary) || text(entry.content)),
 					author: text((list(entry.author)[0] as Record<string, unknown> | undefined)?.name),
 					image: imageOf(entry),
+					content: text(entry.content),
 				};
 			}),
 		};
@@ -114,7 +151,8 @@ function parseFeed(xml: string): { title: string; items: FeedItem[] } {
 	const channel = doc.rss?.channel ?? doc["rdf:RDF"]?.channel ?? {};
 	const items = doc.rss?.channel?.item ?? doc["rdf:RDF"]?.item;
 	return {
-		title: text(channel.title),
+		title: decodeEntities(text(channel.title)),
+		link: text(channel.link),
 		items: list<Record<string, unknown>>(items).map((item) => {
 			const link = text(item.link);
 			return {
@@ -125,26 +163,42 @@ function parseFeed(xml: string): { title: string; items: FeedItem[] } {
 				summary: summarize(text(item.description) || text(item["content:encoded"])),
 				author: text(item["dc:creator"]) || text(item.author),
 				image: imageOf(item),
+				content: text(item["content:encoded"]),
 			};
 		}),
 	};
 }
 
-async function announce(ctx: PluginContext, webhookUrl: string, feedName: string, item: FeedItem) {
-	const target = new URL(webhookUrl);
+interface Bot {
+	webhookUrl: string;
+	username: string;
+	avatarUrl: string;
+}
+
+// Discord can't show .ico favicons; Google's service returns a PNG.
+const faviconOf = (site: string) =>
+	`https://www.google.com/s2/favicons?sz=128&domain=${new URL(site).hostname}`;
+
+async function announce(ctx: PluginContext, bot: Bot, feed: Feed, feedName: string, item: FeedItem) {
+	const footer = [item.author, readingTime(item.content)].filter(Boolean).join(" · ");
+	const target = new URL(bot.webhookUrl);
 	target.searchParams.set("wait", "true");
 	const res = await ctx.http!.fetch(target.href, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
+			username: bot.username,
+			avatar_url: bot.avatarUrl,
 			embeds: [
 				{
+					color: EMBED_COLOR,
+					author: { name: feedName.slice(0, 256), url: feed.link, icon_url: faviconOf(feed.link) },
 					title: (item.title || item.link).slice(0, 256),
 					url: item.link || undefined,
 					description: item.summary || undefined,
-					author: { name: (item.author ? `${feedName} · ${item.author}` : feedName).slice(0, 256) },
-					timestamp: item.published,
 					image: item.image ? { url: item.image } : undefined,
+					footer: footer ? { text: footer.slice(0, 2048) } : undefined,
+					timestamp: item.published,
 				},
 			],
 			allowed_mentions: { parse: [] },
@@ -171,7 +225,7 @@ function parseFeedList(value: string): { name: string; url: string }[] {
 		.filter(({ url }) => URL.canParse(url));
 }
 
-async function pollFeed(ctx: PluginContext, webhookUrl: string, name: string, url: string) {
+async function pollFeed(ctx: PluginContext, bot: Bot, name: string, url: string) {
 	const res = await ctx.http!.fetch(url, {
 		headers: {
 			Accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
@@ -179,14 +233,15 @@ async function pollFeed(ctx: PluginContext, webhookUrl: string, name: string, ur
 		},
 	});
 	if (!res.ok) throw new Error(`Feed returned ${res.status}`);
-	const feed = parseFeed(await res.text());
+	const parsed = parseFeed(await res.text());
+	const feed = { ...parsed, link: absoluteUrl(parsed.link, url) ?? new URL(url).origin };
 	const items = feed.items
 		.filter((item) => item.id)
-		.map((item) => ({
-			...item,
-			link: absoluteUrl(item.link, url) ?? "",
-			image: item.image && absoluteUrl(item.image, url),
-		}))
+		.map((item) => {
+			const link = absoluteUrl(item.link, url) ?? "";
+			const image = item.image ?? firstImage(item.content);
+			return { ...item, link, image: image && absoluteUrl(image, link || url) };
+		})
 		.sort((a, b) => (b.published ?? "").localeCompare(a.published ?? ""));
 
 	const key = `seen:${url}`;
@@ -200,7 +255,7 @@ async function pollFeed(ctx: PluginContext, webhookUrl: string, name: string, ur
 	let failure: unknown;
 	for (const [i, item] of toAnnounce.entries()) {
 		try {
-			await announce(ctx, webhookUrl, name || feed.title, item);
+			await announce(ctx, bot, feed, name || feed.title || new URL(url).hostname, item);
 			announced.push(item.title);
 		} catch (error) {
 			if (error instanceof Rejected) {
@@ -244,6 +299,18 @@ export function createPlugin() {
 					label: "Discord webhook URL",
 					description: "Channel webhook that new feed posts are announced to.",
 				},
+				botName: {
+					type: "string",
+					label: "Bot name",
+					description: `Name the posts appear under. Defaults to ${DEFAULT_BOT_NAME}.`,
+					default: DEFAULT_BOT_NAME,
+				},
+				botAvatarUrl: {
+					type: "url",
+					label: "Bot avatar URL",
+					description: "PNG, JPEG or GIF (not SVG). Defaults to the Inovus Labs logo.",
+					default: DEFAULT_BOT_AVATAR,
+				},
 			},
 		},
 		routes: {
@@ -255,11 +322,16 @@ export function createPlugin() {
 						return { announced: {} };
 					}
 
+					const bot: Bot = {
+						webhookUrl,
+						username: (await ctx.settings.get<string>("botName")) || DEFAULT_BOT_NAME,
+						avatarUrl: (await ctx.settings.get<string>("botAvatarUrl")) || DEFAULT_BOT_AVATAR,
+					};
 					const feeds = parseFeedList((await ctx.settings.get<string>("feeds")) ?? "");
 					const announced: Record<string, string[]> = {};
 					for (const { name, url } of feeds) {
 						try {
-							const titles = await pollFeed(ctx, webhookUrl, name, url);
+							const titles = await pollFeed(ctx, bot, name, url);
 							if (titles.length > 0) announced[name || url] = titles;
 						} catch (error) {
 							if (error instanceof RateLimited) {
