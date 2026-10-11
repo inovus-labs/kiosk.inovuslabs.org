@@ -46,7 +46,7 @@ flowchart TD
     classDef discord fill:#5865F2,stroke:#4752C4,color:#FFFFFF;
 ```
 
-The split is intentional: **for the kiosk, the worker only listens and triggers; the GitHub Actions job does all the fetching and building.** (The worker also fronts the blog's [social web](worker/README.md#ghost-social-web) traffic, which is unrelated to the kiosk build.)
+The split is intentional: **for the kiosk, the worker only listens and triggers; the GitHub Actions job does all the fetching and building.** (The worker also fronts the blog's [social web](worker/README.md#ghost-social-web) traffic and announces [RSS feeds on Discord](worker/README.md#discord-feeds), both unrelated to the kiosk build.)
 
 The worker listens for three event sources and fires a `repository_dispatch` at this repo. **Two distinct event types** are used so the build workflow can branch on origin:
 

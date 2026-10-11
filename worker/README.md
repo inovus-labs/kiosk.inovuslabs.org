@@ -1,12 +1,13 @@
-# Kiosk Worker — EmDash CMS + Ghost bridges
+# Kiosk Worker — EmDash CMS, Ghost bridges + Discord feeds
 
-This directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker at **[kiosk-cms.inovuslabs.org](https://kiosk-cms.inovuslabs.org)**, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](wrangler.jsonc). It's part of the [kiosk display](../README.md) and serves five purposes:
+This directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker at **[kiosk-cms.inovuslabs.org](https://kiosk-cms.inovuslabs.org)**, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](wrangler.jsonc). It's part of the [kiosk display](../README.md) and serves six purposes:
 
 1. **EmDash admin** at `/_emdash/admin` — lab members sign in with a passkey and manage slides in two collections under the **Slides** folder: **Image slides** (a poster) and **Text slides** (headline, body, theme), so each form only shows its own fields. Drafts, revisions, scheduled publishing, and the media library are built in. Leave **Expires at** empty to keep a slide up indefinitely; a lower **Pinned order** shows first (empty = newest first); an empty **Theme** renders as Midnight.
 2. **Slide feed** at `/api/slides.json` — the live slides, already filtered and ordered, read by the GitHub Actions build.
 3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
 4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
 5. **Ghost social web proxy** ([`src/lib/activitypub.ts`](src/lib/activitypub.ts)) — Cloudflare routes send the blog's ActivityPub paths to Ghost's hosted ActivityPub service. See [Ghost social web](#ghost-social-web).
+6. **Feeds plugin** ([`src/plugins/feeds.ts`](src/plugins/feeds.ts)) — announces new posts from a list of RSS/Atom feeds to a Discord channel. See [Discord feeds](#discord-feeds).
 
 The content model lives in [`seed/seed.json`](seed/seed.json) and is applied on first boot; there are no migration files to maintain. To change it on a live site, see [Evolving a deployed site](https://docs.emdashcms.com/deployment/schema-evolution/).
 
@@ -87,3 +88,19 @@ Blog pages themselves never touch the worker; only the routes above do.
 | Bluesky, via [Bridgy Fed](https://fed.brid.gy) | [`@blog.inovuslabs.org.ap.brid.gy`](https://bsky.app/profile/blog.inovuslabs.org.ap.brid.gy) |
 
 New posts reach both automatically; Bluesky follows a few minutes behind.
+
+## Discord feeds
+
+Lab members manage the feed list in the admin's **Feeds** collection (name + feed URL). Every 10 minutes, the same Cron Trigger polls each published feed and posts every new entry to a Discord channel webhook as an embed (title, link, summary, author, cover image). RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+
+- **Add a feed** — create it and **Publish**. Its latest post is announced on the next poll, then every new post after it.
+- **Pause a feed** — **Unpublish** it. Posts published while it was paused are announced when it's published again (up to 5 at once).
+- **Change a feed's URL** — treated as a new feed: only its latest post is announced.
+
+Posted entries are remembered per feed URL in the plugin's KV. A failed Discord post is retried on the next poll; a 429 rate limit ends the poll early and resumes on the next one.
+
+**Setup:**
+
+1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
+2. In the admin, open the **Feeds** plugin's settings and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
+3. On a site that predates the Feeds collection, create it once in the admin, matching [`seed/seed.json`](seed/seed.json): slug `feeds`, fields `name` (string, required) and `url` (URL, required), with drafts enabled. The seed only applies on first boot.
