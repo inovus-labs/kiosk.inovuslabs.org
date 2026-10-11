@@ -352,30 +352,22 @@ async function addFeed(ctx: PluginContext, name: string, url: string, enabled = 
 	return record;
 }
 
-async function addFeedList(ctx: PluginContext, text: string, allowPaused = false) {
-	const added: string[] = [];
-	const failed: string[] = [];
-	for (const raw of text.split("\n")) {
-		let line = raw.trim();
-		if (!line) continue;
-		const paused = allowPaused && line.startsWith("#");
-		if (paused) line = line.slice(1).trim();
-		const bar = line.lastIndexOf("|");
-		const [name, url] = bar === -1 ? ["", line] : [line.slice(0, bar), line.slice(bar + 1)];
-		try {
-			added.push((await addFeed(ctx, name, url, !paused)).name);
-		} catch (error) {
-			failed.push(error instanceof Error ? error.message : String(error));
-		}
-	}
-	return { added, failed };
-}
-
 async function importLegacyList(ctx: PluginContext) {
 	const legacy = await ctx.settings.get<string>("feeds");
 	if (legacy === null) return;
-	const { added, failed } = await addFeedList(ctx, legacy, true);
-	ctx.log.info("Imported feed list from settings", { added, failed });
+	for (const raw of legacy.split("\n")) {
+		const line = raw.trim();
+		if (!line) continue;
+		const paused = line.startsWith("#");
+		const entry = paused ? line.slice(1).trim() : line;
+		const bar = entry.lastIndexOf("|");
+		const [name, url] = bar === -1 ? ["", entry] : [entry.slice(0, bar), entry.slice(bar + 1)];
+		try {
+			await addFeed(ctx, name, url, !paused);
+		} catch (error) {
+			ctx.log.warn("Couldn't import feed from settings", { line, error: String(error) });
+		}
+	}
 	await ctx.settings.delete("feeds");
 }
 
@@ -420,26 +412,6 @@ async function renderPage(ctx: PluginContext): Promise<Block[]> {
 				{ type: "text_input", action_id: "name", label: "Name", placeholder: "Defaults to the feed's title" },
 			],
 			submit: { label: "Add feed", action_id: "add" },
-		},
-		{
-			type: "accordion",
-			label: "Add many feeds at once",
-			blocks: [
-				{
-					type: "form",
-					block_id: "add_many",
-					fields: [
-						{
-							type: "text_input",
-							action_id: "feeds",
-							label: "Feeds",
-							multiline: true,
-							placeholder: "One per line: Name | https://example.com/feed.xml (or just the URL)",
-						},
-					],
-					submit: { label: "Add feeds", action_id: "add_many" },
-				},
-			],
 		},
 	);
 	if (failing.length > 0) {
@@ -518,14 +490,6 @@ async function handleInteraction(
 		const values = interaction.values as { name?: string; url?: string };
 		const record = await addFeed(ctx, values.name ?? "", values.url ?? "");
 		return { message: `Added ${record.name}`, type: "success" };
-	}
-	if (interaction.type === "form_submit" && interaction.action_id === "add_many") {
-		const { added, failed } = await addFeedList(ctx, String(interaction.values.feeds ?? ""));
-		const message = [
-			`Added ${added.length} feed${added.length === 1 ? "" : "s"}`,
-			...failed,
-		].join(". ");
-		return { message, type: failed.length > 0 ? "error" : "success" };
 	}
 	if (interaction.type !== "block_action") return undefined;
 
