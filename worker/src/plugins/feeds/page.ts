@@ -3,7 +3,7 @@ import type { PluginContext } from "emdash";
 import { pollAll } from "./poll";
 import { addFeed, editFeed, feedStore, listFeeds } from "./store";
 
-export const PAGE_PATH = "/feeds";
+export const PAGE_PATH = "/";
 
 export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?: string): Promise<Block[]> {
 	const feeds = await listFeeds(ctx);
