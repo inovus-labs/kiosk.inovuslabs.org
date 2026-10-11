@@ -100,6 +100,33 @@
 					"indexed": true
 				}
 			]
+		},
+		{
+			"slug": "feeds",
+			"label": "Feeds",
+			"labelSingular": "Feed",
+			"description": "RSS and Atom feeds whose new posts are announced on Discord. Publish a feed to start announcing it (its latest post goes out first); unpublish to pause it.",
+			"icon": "rss",
+			"sortOrder": 3,
+			"routable": false,
+			"supports": ["drafts"],
+			"titleField": "name",
+			"admin": { "listColumns": ["url"] },
+			"fields": [
+				{
+					"slug": "name",
+					"label": "Name",
+					"type": "string",
+					"required": true,
+					"validation": { "maxLength": 120 }
+				},
+				{
+					"slug": "url",
+					"label": "Feed URL",
+					"type": "url",
+					"required": true
+				}
+			]
 		}
 	]
 }

@@ -38,9 +38,24 @@ export interface TextSlide {
   terms?: Record<string, TaxonomyTerm[]>;
 }
 
+export interface Feed {
+  id: string;
+  slug: string | null;
+  status: string;
+  name: string;
+  url: string;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  byline?: BylineSummary | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
 declare module "emdash" {
   interface EmDashCollections {
     image_slides: ImageSlide;
     text_slides: TextSlide;
+    feeds: Feed;
   }
 }
