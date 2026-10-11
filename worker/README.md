@@ -91,7 +91,7 @@ New posts reach both automatically; Bluesky follows a few minutes behind.
 
 ## Discord feeds
 
-Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit, pause or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each active feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time. Each feed gets its own embed colour when it's added. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time. Each feed gets its own embed colour when it's added. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
 ```mermaid
 flowchart TD
@@ -119,11 +119,10 @@ flowchart TD
     classDef discord fill:#5865F2,stroke:#4752C4,color:#FFFFFF;
 ```
 
-The page shows each feed's status (Active, Paused or Failing), when it last announced a post and which one, and why any failing feed is failing:
+The page shows each feed's status (Active or Failing), when it last announced a post and which one, and why any failing feed is failing:
 
 - **Add a feed** — paste its URL (the name defaults to the feed's title). It's fetched first, so typos and pages that aren't feeds are rejected. Its latest post is announced on the next poll, then every new post after it.
 - **Edit** — change a feed's name or URL. A new URL counts as a new feed: its latest post is announced once.
-- **Pause / Resume** — posts published while a feed was paused are announced when it resumes (up to 5 at once).
 - **Remove** — asks for confirmation. Adding the same URL back later doesn't repost what was already announced.
 - **Check feeds now** — polls immediately instead of waiting for the cron.
 
@@ -133,4 +132,4 @@ Posted entries are remembered per feed URL in the plugin's KV. A failed Discord 
 
 1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
 2. In the admin, open the **Feeds** plugin's settings (or **Webhook settings** on the Discord feeds page) and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
-3. Add feeds on the **Discord feeds** page. A list saved in the earlier **Feeds** textarea setting is moved into the table automatically (lines starting with `#` come in paused).
+3. Add feeds on the **Discord feeds** page. A list saved in the earlier **Feeds** textarea setting is moved into the table automatically (lines starting with `#` are skipped).

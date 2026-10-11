@@ -235,7 +235,6 @@ interface FeedRecord {
 	name: string;
 	color?: number;
 	url: string;
-	enabled: boolean;
 	createdAt: string;
 	lastPostAt?: string;
 	lastPostTitle?: string;
@@ -326,7 +325,6 @@ async function pollAll(ctx: PluginContext): Promise<Record<string, string[]>> {
 
 	const announced: Record<string, string[]> = {};
 	for (const [index, { id, data }] of (await listFeeds(ctx)).entries()) {
-		if (!data.enabled) continue;
 		// Feeds added before colours existed get one on their first poll.
 		let update: Partial<FeedRecord> | undefined =
 			data.color === undefined ? { color: feedColor(index) } : undefined;
@@ -379,14 +377,13 @@ async function feedTitle(ctx: PluginContext, href: string): Promise<string> {
 	return feed.title || new URL(href).hostname;
 }
 
-async function addFeed(ctx: PluginContext, name: string, url: string, enabled = true) {
+async function addFeed(ctx: PluginContext, name: string, url: string) {
 	const href = await newFeedUrl(ctx, url);
 	const title = await feedTitle(ctx, href);
 	const record: FeedRecord = {
 		name: name.trim() || title,
 		color: feedColor(await feedStore(ctx).count()),
 		url: href,
-		enabled,
 		createdAt: new Date().toISOString(),
 	};
 	await feedStore(ctx).put(crypto.randomUUID(), record);
@@ -405,7 +402,6 @@ async function editFeed(ctx: PluginContext, id: string, name: string, url: strin
 				name: name.trim() || title,
 				color: record.color,
 				url: href,
-				enabled: record.enabled,
 				createdAt: record.createdAt,
 			};
 	await feedStore(ctx).put(id, updated);
@@ -417,13 +413,11 @@ async function importLegacyList(ctx: PluginContext) {
 	if (legacy === null) return;
 	for (const raw of legacy.split("\n")) {
 		const line = raw.trim();
-		if (!line) continue;
-		const paused = line.startsWith("#");
-		const entry = paused ? line.slice(1).trim() : line;
-		const bar = entry.lastIndexOf("|");
-		const [name, url] = bar === -1 ? ["", entry] : [entry.slice(0, bar), entry.slice(bar + 1)];
+		if (!line || line.startsWith("#")) continue;
+		const bar = line.lastIndexOf("|");
+		const [name, url] = bar === -1 ? ["", line] : [line.slice(0, bar), line.slice(bar + 1)];
 		try {
-			await addFeed(ctx, name, url, !paused);
+			await addFeed(ctx, name, url);
 		} catch (error) {
 			ctx.log.warn("Couldn't import feed from settings", { line, error: String(error) });
 		}
@@ -437,15 +431,14 @@ const ADMIN_ROLE = 50;
 async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?: string): Promise<Block[]> {
 	const feeds = await listFeeds(ctx);
 	const edited = feeds.find(({ id }) => id === editing);
-	const failing = feeds.filter(({ data }) => data.enabled && data.lastError);
-	const active = feeds.filter(({ data }) => data.enabled).length;
+	const failing = feeds.filter(({ data }) => data.lastError);
 	const hasWebhook = Boolean(await ctx.settings.get<string>("webhookUrl"));
 
 	const blocks: Block[] = [
 		{ type: "header", text: "Discord feeds" },
 		{
 			type: "context",
-			text: "New posts from active feeds are announced on Discord every 10 minutes. A newly added feed announces its latest post first.",
+			text: "New posts from these feeds are announced on Discord every 10 minutes. A newly added feed announces its latest post first.",
 		},
 	];
 	if (isAdmin && !hasWebhook) {
@@ -461,8 +454,6 @@ async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?: string
 			type: "stats",
 			items: [
 				{ label: "Feeds", value: feeds.length },
-				{ label: "Active", value: active },
-				{ label: "Paused", value: feeds.length - active },
 				{ label: "Failing", value: failing.length, trend: failing.length > 0 ? "down" : "neutral" },
 			],
 		},
@@ -527,7 +518,6 @@ async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?: string
 				...(isAdmin
 					? ([
 							{ key: "edit", label: "", format: "element" },
-							{ key: "toggle", label: "", format: "element" },
 							{ key: "remove", label: "", format: "element" },
 						] as const)
 					: []),
@@ -535,18 +525,11 @@ async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?: string
 			rows: feeds.map(({ id, data }) => ({
 				name: data.name,
 				url: data.url,
-				status: !data.enabled ? "Paused" : data.lastError ? "Failing" : "Active",
+				status: data.lastError ? "Failing" : "Active",
 				lastPostAt: data.lastPostAt ?? "",
 				lastPostTitle: data.lastPostTitle ?? "—",
 				...(isAdmin && {
 					edit: { type: "button", action_id: "edit", label: "Edit", style: "secondary", value: id },
-					toggle: {
-						type: "button",
-						action_id: "toggle",
-						label: data.enabled ? "Pause" : "Resume",
-						style: "secondary",
-						value: id,
-					},
 					remove: {
 						type: "button",
 						action_id: "remove",
@@ -605,12 +588,6 @@ async function handleInteraction(
 
 	const id = String(interaction.value ?? "");
 	if (interaction.action_id === "edit") return { editing: id };
-	if (interaction.action_id === "toggle") {
-		const record = await feedStore(ctx).get(id);
-		if (!record) throw new Error("That feed no longer exists");
-		await feedStore(ctx).put(id, { ...record, enabled: !record.enabled });
-		return { toast: { message: `${record.enabled ? "Paused" : "Resumed"} ${record.name}`, type: "success" } };
-	}
 	if (interaction.action_id === "remove") {
 		const record = await feedStore(ctx).get(id);
 		await feedStore(ctx).delete(id);
