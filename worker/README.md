@@ -91,7 +91,7 @@ New posts reach both automatically; Bluesky follows a few minutes behind.
 
 ## Discord feeds
 
-Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit, pause or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each active feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time, in the logo's blue. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit, pause or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each active feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time. Each feed gets its own embed colour when it's added. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
 ```mermaid
 flowchart TD

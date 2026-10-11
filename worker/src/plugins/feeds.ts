@@ -8,7 +8,6 @@ const SEEN_LIMIT = 500;
 const MAX_NEW_PER_FEED = 5;
 const SUMMARY_LENGTH = 300;
 const WORDS_PER_MINUTE = 225;
-const EMBED_COLOR = 0x499fbf;
 
 const parser = new XMLParser({
 	ignoreAttributes: false,
@@ -184,11 +183,21 @@ async function pageImage(ctx: PluginContext, link: string): Promise<string | und
 	return content ? absoluteUrl(decodeEntities(content), link) : undefined;
 }
 
+// Golden-angle steps keep each new feed's hue far from the ones before it.
+function feedColor(index: number): number {
+	const hue = (index * 137.508) % 360;
+	const channel = (n: number) => {
+		const k = (n + hue / 30) % 12;
+		return Math.round((0.55 - 0.2925 * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255);
+	};
+	return (channel(0) << 16) | (channel(8) << 8) | channel(4);
+}
+
 async function announce(
 	ctx: PluginContext,
 	webhookUrl: string,
 	feed: Feed,
-	feedName: string,
+	record: FeedRecord,
 	item: FeedItem,
 ) {
 	const footer = [item.author, readingTime(item.content)].filter(Boolean).join(" · ");
@@ -202,8 +211,8 @@ async function announce(
 		body: JSON.stringify({
 			embeds: [
 				{
-					color: EMBED_COLOR,
-					author: { name: feedName.slice(0, 256), url: feed.link, icon_url: icon },
+					color: record.color,
+					author: { name: record.name.slice(0, 256), url: feed.link, icon_url: icon },
 					title: (item.title || item.link).slice(0, 256),
 					url: item.link || undefined,
 					description: item.summary || undefined,
@@ -224,6 +233,7 @@ async function announce(
 
 interface FeedRecord {
 	name: string;
+	color?: number;
 	url: string;
 	enabled: boolean;
 	createdAt: string;
@@ -283,7 +293,7 @@ async function pollFeed(ctx: PluginContext, webhookUrl: string, record: FeedReco
 	let failure: unknown;
 	for (const [i, item] of toAnnounce.entries()) {
 		try {
-			await announce(ctx, webhookUrl, feed, record.name, item);
+			await announce(ctx, webhookUrl, feed, record, item);
 			announced.push(item);
 		} catch (error) {
 			if (error instanceof Rejected) {
@@ -315,15 +325,22 @@ async function pollAll(ctx: PluginContext): Promise<Record<string, string[]>> {
 	}
 
 	const announced: Record<string, string[]> = {};
-	for (const { id, data } of await listFeeds(ctx)) {
+	for (const [index, { id, data }] of (await listFeeds(ctx)).entries()) {
 		if (!data.enabled) continue;
-		let update: Partial<FeedRecord> | undefined;
+		// Feeds added before colours existed get one on their first poll.
+		let update: Partial<FeedRecord> | undefined =
+			data.color === undefined ? { color: feedColor(index) } : undefined;
+		const record = { ...data, ...update };
 		try {
-			const posts = await pollFeed(ctx, webhookUrl, data);
+			const posts = await pollFeed(ctx, webhookUrl, record);
 			if (posts.length > 0) {
 				const latest = posts[posts.length - 1]!;
 				announced[data.name] = posts.map((post) => post.title);
-				update = { lastPostAt: latest.published ?? new Date().toISOString(), lastPostTitle: latest.title };
+				update = {
+					...update,
+					lastPostAt: latest.published ?? new Date().toISOString(),
+					lastPostTitle: latest.title,
+				};
 			}
 			if (data.lastError) update = { ...update, lastError: undefined };
 		} catch (error) {
@@ -334,9 +351,9 @@ async function pollAll(ctx: PluginContext): Promise<Record<string, string[]>> {
 			const message = error instanceof Error ? error.message : String(error);
 			ctx.log.error("Feed poll failed", { feed: data.name, url: data.url, error: message });
 			// Write only on change so a failing feed doesn't cost a D1 write every poll.
-			if (message !== data.lastError) update = { lastError: message.slice(0, 300) };
+			if (message !== data.lastError) update = { ...update, lastError: message.slice(0, 300) };
 		}
-		if (update) await feedStore(ctx).put(id, { ...data, ...update });
+		if (update) await feedStore(ctx).put(id, { ...record, ...update });
 	}
 	if (Object.keys(announced).length > 0) ctx.log.info("Announced feed posts", { announced });
 	return announced;
@@ -367,6 +384,7 @@ async function addFeed(ctx: PluginContext, name: string, url: string, enabled = 
 	const title = await feedTitle(ctx, href);
 	const record: FeedRecord = {
 		name: name.trim() || title,
+		color: feedColor(await feedStore(ctx).count()),
 		url: href,
 		enabled,
 		createdAt: new Date().toISOString(),
@@ -383,7 +401,13 @@ async function editFeed(ctx: PluginContext, id: string, name: string, url: strin
 	const title = sameUrl && name.trim() ? "" : await feedTitle(ctx, href);
 	const updated: FeedRecord = sameUrl
 		? { ...record, name: name.trim() || title }
-		: { name: name.trim() || title, url: href, enabled: record.enabled, createdAt: record.createdAt };
+		: {
+				name: name.trim() || title,
+				color: record.color,
+				url: href,
+				enabled: record.enabled,
+				createdAt: record.createdAt,
+			};
 	await feedStore(ctx).put(id, updated);
 	return updated;
 }
