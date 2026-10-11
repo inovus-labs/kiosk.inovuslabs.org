@@ -394,8 +394,9 @@ async function importLegacyList(ctx: PluginContext) {
 }
 
 const PAGE_PATH = "/feeds";
+const ADMIN_ROLE = 50;
 
-async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]> {
+async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?: string): Promise<Block[]> {
 	const feeds = await listFeeds(ctx);
 	const edited = feeds.find(({ id }) => id === editing);
 	const failing = feeds.filter(({ data }) => data.enabled && data.lastError);
@@ -409,7 +410,7 @@ async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]
 			text: "New posts from active feeds are announced on Discord every 10 minutes. A newly added feed announces its latest post first.",
 		},
 	];
-	if (!hasWebhook) {
+	if (isAdmin && !hasWebhook) {
 		blocks.push({
 			type: "banner",
 			variant: "alert",
@@ -428,7 +429,7 @@ async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]
 			],
 		},
 	);
-	if (edited) {
+	if (isAdmin && edited) {
 		blocks.push(
 			{
 				type: "context",
@@ -454,7 +455,7 @@ async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]
 				elements: [{ type: "button", action_id: "cancel", label: "Cancel", style: "secondary" }],
 			},
 		);
-	} else {
+	} else if (isAdmin) {
 		blocks.push({
 			type: "form",
 			block_id: "add",
@@ -478,16 +479,20 @@ async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]
 			type: "table",
 			block_id: "feeds",
 			page_action_id: "feeds_page",
-			empty_text: "No feeds yet. Add one above.",
+			empty_text: isAdmin ? "No feeds yet. Add one above." : "No feeds yet.",
 			columns: [
 				{ key: "name", label: "Name" },
 				{ key: "url", label: "Feed URL", format: "code" },
 				{ key: "status", label: "Status", format: "badge" },
 				{ key: "lastPostAt", label: "Last announced", format: "relative_time" },
 				{ key: "lastPostTitle", label: "Last post" },
-				{ key: "edit", label: "", format: "element" },
-				{ key: "toggle", label: "", format: "element" },
-				{ key: "remove", label: "", format: "element" },
+				...(isAdmin
+					? ([
+							{ key: "edit", label: "", format: "element" },
+							{ key: "toggle", label: "", format: "element" },
+							{ key: "remove", label: "", format: "element" },
+						] as const)
+					: []),
 			],
 			rows: feeds.map(({ id, data }) => ({
 				name: data.name,
@@ -495,31 +500,35 @@ async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]
 				status: !data.enabled ? "Paused" : data.lastError ? "Failing" : "Active",
 				lastPostAt: data.lastPostAt ?? "",
 				lastPostTitle: data.lastPostTitle ?? "—",
-				edit: { type: "button", action_id: "edit", label: "Edit", style: "secondary", value: id },
-				toggle: {
-					type: "button",
-					action_id: "toggle",
-					label: data.enabled ? "Pause" : "Resume",
-					style: "secondary",
-					value: id,
-				},
-				remove: {
-					type: "button",
-					action_id: "remove",
-					label: "Remove",
-					style: "danger",
-					value: id,
-					confirm: {
-						title: `Remove ${data.name}?`,
-						text: "Its posts stop being announced. Adding it back later won't repost what was already announced.",
-						confirm: "Remove",
-						deny: "Cancel",
-						style: "danger",
+				...(isAdmin && {
+					edit: { type: "button", action_id: "edit", label: "Edit", style: "secondary", value: id },
+					toggle: {
+						type: "button",
+						action_id: "toggle",
+						label: data.enabled ? "Pause" : "Resume",
+						style: "secondary",
+						value: id,
 					},
-				},
+					remove: {
+						type: "button",
+						action_id: "remove",
+						label: "Remove",
+						style: "danger",
+						value: id,
+						confirm: {
+							title: `Remove ${data.name}?`,
+							text: "Its posts stop being announced. Adding it back later won't repost what was already announced.",
+							confirm: "Remove",
+							deny: "Cancel",
+							style: "danger",
+						},
+					},
+				}),
 			})),
 		},
-		{
+	);
+	if (isAdmin) {
+		blocks.push({
 			type: "actions",
 			elements: [
 				{ type: "button", action_id: "poll", label: "Check feeds now", style: "primary" },
@@ -530,8 +539,8 @@ async function renderPage(ctx: PluginContext, editing?: string): Promise<Block[]
 					appearance: "secondary",
 				},
 			],
-		},
-	);
+		});
+	}
 	return blocks;
 }
 
@@ -604,13 +613,18 @@ export function createPlugin() {
 			},
 		},
 		routes: {
+			// Every role can view; changes are Admin-only, checked below.
 			admin: {
-				permission: "plugins:manage",
+				permission: "content:read",
 				handler: async (ctx) => {
 					await importLegacyList(ctx);
 					const interaction = ctx.input as BlockInteraction;
+					const isAdmin = (ctx.user?.role ?? 0) >= ADMIN_ROLE;
 					let result: Awaited<ReturnType<typeof handleInteraction>>;
 					try {
+						if (!isAdmin && interaction.type !== "page_load") {
+							throw new Error("Only admins can change feeds");
+						}
 						result = await handleInteraction(ctx, interaction);
 					} catch (error) {
 						result = {
@@ -618,7 +632,10 @@ export function createPlugin() {
 							editing: editedId(interaction),
 						};
 					}
-					return { blocks: await renderPage(ctx, result.editing), toast: result.toast } satisfies BlockResponse;
+					return {
+						blocks: await renderPage(ctx, isAdmin, result.editing),
+						toast: result.toast,
+					} satisfies BlockResponse;
 				},
 			},
 			poll: {
