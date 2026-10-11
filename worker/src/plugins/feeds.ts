@@ -2,7 +2,6 @@ import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
 import { XMLParser } from "fast-xml-parser";
 
-const FEEDS_COLLECTION = "feeds";
 /** Seen IDs kept per feed; well above any feed's page size so old posts never resurface. */
 const SEEN_LIMIT = 500;
 /** Caps a burst (or a feed that re-keys its GUIDs) so it can't flood the channel. */
@@ -162,9 +161,24 @@ async function announce(ctx: PluginContext, webhookUrl: string, feedName: string
 	throw res.status === 400 || res.status === 413 ? new Rejected(message) : new Error(message);
 }
 
+/** One feed per line as `Name | URL` or a bare URL; `#` comments a line out to pause it. */
+function parseFeedList(value: string): { name: string; url: string }[] {
+	return value
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line && !line.startsWith("#"))
+		.map((line) => {
+			const bar = line.lastIndexOf("|");
+			return bar === -1
+				? { name: "", url: line }
+				: { name: line.slice(0, bar).trim(), url: line.slice(bar + 1).trim() };
+		})
+		.filter(({ url }) => URL.canParse(url));
+}
+
 /**
  * Announce a feed's unseen posts, oldest first. A feed seen for the first time
- * announces only its latest post. Seen IDs are keyed by feed URL, so editing a
+ * announces only its latest post. Seen IDs are keyed by feed URL, so changing a
  * feed's URL starts it over as a new feed.
  */
 async function pollFeed(ctx: PluginContext, webhookUrl: string, name: string, url: string) {
@@ -224,10 +238,18 @@ export function createPlugin() {
 	return definePlugin({
 		id: "feeds",
 		version: "1.0.0",
-		// Feed hosts are whatever editors add in the admin; ctx.http still blocks private targets.
-		capabilities: ["content:read", "network:request:unrestricted"],
+		// Feed hosts are whatever admins list in the settings; ctx.http still blocks private targets.
+		capabilities: ["network:request:unrestricted"],
+		// Plugin settings need the Admin role, unlike collections, which every Editor can change.
 		admin: {
 			settingsSchema: {
+				feeds: {
+					type: "string",
+					multiline: true,
+					label: "Feeds",
+					description:
+						"One per line: Name | https://example.com/feed (or just the URL). Start a line with # to pause it.",
+				},
 				webhookUrl: {
 					type: "secret",
 					label: "Discord webhook URL",
@@ -245,21 +267,7 @@ export function createPlugin() {
 						return { announced: {} };
 					}
 
-					const feeds: { name: string; url: string }[] = [];
-					let cursor: string | undefined;
-					do {
-						const page = await ctx.content!.list(FEEDS_COLLECTION, {
-							limit: 100,
-							cursor,
-							where: { status: "published" },
-						});
-						for (const item of page.items) {
-							const data = item.data as { name?: string; url?: string };
-							if (data.url) feeds.push({ name: data.name ?? "", url: data.url });
-						}
-						cursor = page.hasMore ? page.cursor : undefined;
-					} while (cursor);
-
+					const feeds = parseFeedList((await ctx.settings.get<string>("feeds")) ?? "");
 					const announced: Record<string, string[]> = {};
 					for (const { name, url } of feeds) {
 						try {
