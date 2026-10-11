@@ -91,7 +91,7 @@ New posts reach both automatically; Bluesky follows a few minutes behind.
 
 ## Discord feeds
 
-The feed list lives in the **Feeds** plugin's settings, which only Admins can open; Editors and other lab members never see it (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each listed feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time, in the logo's blue. Posts come from **Inovus Radar** with the Inovus Labs logo as its avatar; both can be changed in the plugin's settings. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+Feeds are managed on the **Discord feeds** admin page, a table backed by the plugin's own storage. The page and the plugin's settings both need the Admin role, so Editors and other lab members never see them (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each active feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time, in the logo's blue. Posts come from **Inovus Radar** with the Inovus Labs logo as its avatar; both can be changed in the plugin's settings. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
 ```mermaid
 flowchart TD
@@ -102,15 +102,15 @@ flowchart TD
     %% ── Worker ──────────────────────────────────
     CR[Cron Trigger<br/>every 10 min]:::cf
     W[Cloudflare Worker<br/>feeds plugin]:::cf
-    KV[(Plugin KV<br/>seen posts)]:::cf
+    KV[(Plugin storage<br/>feeds & seen posts)]:::cf
 
     %% ── Delivery ────────────────────────────────
     D[Discord channel<br/>webhook]:::discord
 
-    U -->|Feed list in<br/>plugin settings| W
+    U -->|Discord feeds<br/>admin page| W
     CR --> W
     W -->|Fetch| F
-    W <-->|Seen post IDs| KV
+    W <-->|Feed list ·<br/>seen post IDs| KV
     W -->|New posts as embeds| D
 
     classDef user    fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A;
@@ -119,22 +119,18 @@ flowchart TD
     classDef discord fill:#5865F2,stroke:#4752C4,color:#FFFFFF;
 ```
 
-The **Feeds** setting takes one feed per line, either `Name | URL` or a bare URL (the feed's own title is used as the name):
+The page shows each feed's status (Active, Paused or Failing), when it last announced a post and which one, and why any failing feed is failing:
 
-```text
-Inovus Labs Blog | https://blog.inovuslabs.org/rss/
-https://jvns.ca/atom.xml
-# Paused | https://example.com/feed.xml
-```
-
-- **Add a feed** — add a line. Its latest post is announced on the next poll, then every new post after it.
-- **Pause a feed** — start its line with `#` (or remove it). Posts published while it was paused are announced when it's back (up to 5 at once).
-- **Change a feed's URL** — treated as a new feed: only its latest post is announced.
+- **Add a feed** — paste its URL (the name defaults to the feed's title). It's fetched first, so typos and pages that aren't feeds are rejected. Its latest post is announced on the next poll, then every new post after it.
+- **Add many** — the **Add many feeds at once** box takes one feed per line, either `Name | URL` or a bare URL.
+- **Pause / Resume** — posts published while a feed was paused are announced when it resumes (up to 5 at once).
+- **Remove** — asks for confirmation. Adding the same URL back later doesn't repost what was already announced.
+- **Check feeds now** — polls immediately instead of waiting for the cron.
 
 Posted entries are remembered per feed URL in the plugin's KV. A failed Discord post is retried on the next poll; a 429 rate limit ends the poll early and resumes on the next one.
 
 **Setup:**
 
 1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
-2. In the admin, open the **Feeds** plugin's settings and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
-3. Fill in **Feeds** and save. **Bot name** and **Bot avatar URL** are optional.
+2. In the admin, open the **Feeds** plugin's settings (or **Webhook & bot settings** on the Discord feeds page) and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`. **Bot name** and **Bot avatar URL** are optional.
+3. Add feeds on the **Discord feeds** page. A list saved in the earlier **Feeds** textarea setting is moved into the table automatically (lines starting with `#` come in paused).
