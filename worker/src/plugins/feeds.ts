@@ -168,9 +168,21 @@ function parseFeed(xml: string): Feed {
 	};
 }
 
-// Discord can't show .ico favicons; Google's service returns a PNG.
-const faviconOf = (site: string) =>
-	`https://www.google.com/s2/favicons?sz=128&domain=${new URL(site).hostname}`;
+// Discord can't show .ico favicons; Google's service returns a PNG, or a 404 when a site has none.
+async function faviconOf(ctx: PluginContext, site: string): Promise<string | undefined> {
+	const url = `https://www.google.com/s2/favicons?sz=128&domain=${new URL(site).hostname}`;
+	const res = await ctx.http!.fetch(url).catch(() => null);
+	return res?.ok ? url : undefined;
+}
+
+async function pageImage(ctx: PluginContext, link: string): Promise<string | undefined> {
+	if (!link) return undefined;
+	const res = await ctx.http!.fetch(link).catch(() => null);
+	if (!res?.ok) return undefined;
+	const tag = (await res.text()).match(/<meta[^>]+["'](?:og:image|twitter:image)["'][^>]*>/i)?.[0];
+	const content = tag?.match(/content=["']([^"']+)["']/i)?.[1];
+	return content ? absoluteUrl(decodeEntities(content), link) : undefined;
+}
 
 async function announce(
 	ctx: PluginContext,
@@ -180,6 +192,8 @@ async function announce(
 	item: FeedItem,
 ) {
 	const footer = [item.author, readingTime(item.content)].filter(Boolean).join(" · ");
+	const image = item.image ?? (await pageImage(ctx, item.link));
+	const icon = await faviconOf(ctx, feed.link);
 	const target = new URL(webhookUrl);
 	target.searchParams.set("wait", "true");
 	const res = await ctx.http!.fetch(target.href, {
@@ -189,11 +203,11 @@ async function announce(
 			embeds: [
 				{
 					color: EMBED_COLOR,
-					author: { name: feedName.slice(0, 256), url: feed.link, icon_url: faviconOf(feed.link) },
+					author: { name: feedName.slice(0, 256), url: feed.link, icon_url: icon },
 					title: (item.title || item.link).slice(0, 256),
 					url: item.link || undefined,
 					description: item.summary || undefined,
-					image: item.image ? { url: item.image } : undefined,
+					image: image ? { url: image } : undefined,
 					footer: footer ? { text: footer.slice(0, 2048) } : undefined,
 					timestamp: item.published,
 				},
