@@ -7,7 +7,7 @@ This directory is an [EmDash](https://emdashcms.com/) site (Astro, server-render
 3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
 4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
 5. **Ghost social web proxy** ([`src/lib/activitypub.ts`](src/lib/activitypub.ts)) — Cloudflare routes send the blog's ActivityPub paths to Ghost's hosted ActivityPub service. See [Ghost social web](#ghost-social-web).
-6. **Feeds plugin** ([`src/plugins/feeds.ts`](src/plugins/feeds.ts)) — announces new posts from a list of RSS/Atom feeds to a Discord channel. See [Discord feeds](#discord-feeds).
+6. **Feeds plugin** ([`src/plugins/feeds.ts`](src/plugins/feeds.ts)) — announces new posts from an admin-only list of RSS/Atom feeds to a Discord channel. See [Discord feeds](#discord-feeds).
 
 The content model lives in [`seed/seed.json`](seed/seed.json) and is applied on first boot; there are no migration files to maintain. To change it on a live site, see [Evolving a deployed site](https://docs.emdashcms.com/deployment/schema-evolution/).
 
@@ -91,10 +91,44 @@ New posts reach both automatically; Bluesky follows a few minutes behind.
 
 ## Discord feeds
 
-Lab members manage the feed list in the admin's **Feeds** collection (name + feed URL). Every 10 minutes, the same Cron Trigger polls each published feed and posts every new entry to a Discord channel webhook as an embed (title, link, summary, author, cover image). RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+The feed list lives in the **Feeds** plugin's settings, which only Admins can open; Editors and other lab members never see it (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each listed feed and posts every new entry to a Discord channel webhook as an embed (title, link, summary, author, cover image). RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
-- **Add a feed** — create it and **Publish**. Its latest post is announced on the next poll, then every new post after it.
-- **Pause a feed** — **Unpublish** it. Posts published while it was paused are announced when it's published again (up to 5 at once).
+```mermaid
+flowchart TD
+    %% ── Sources ─────────────────────────────────
+    U[Admins]:::user
+    F[(Blogs & other<br/>RSS / Atom feeds)]:::source
+
+    %% ── Worker ──────────────────────────────────
+    CR[Cron Trigger<br/>every 10 min]:::cf
+    W[Cloudflare Worker<br/>feeds plugin]:::cf
+    KV[(Plugin KV<br/>seen posts)]:::cf
+
+    %% ── Delivery ────────────────────────────────
+    D[Discord channel<br/>webhook]:::discord
+
+    U -->|Feed list in<br/>plugin settings| W
+    CR --> W
+    W -->|Fetch| F
+    W <-->|Seen post IDs| KV
+    W -->|New posts as embeds| D
+
+    classDef user    fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A;
+    classDef source  fill:#FEF3C7,stroke:#F59E0B,color:#78350F;
+    classDef cf      fill:#FFE4CC,stroke:#F38020,color:#7C2D12;
+    classDef discord fill:#5865F2,stroke:#4752C4,color:#FFFFFF;
+```
+
+The **Feeds** setting takes one feed per line, either `Name | URL` or a bare URL (the feed's own title is used as the name):
+
+```text
+Inovus Labs Blog | https://blog.inovuslabs.org/rss/
+https://jvns.ca/atom.xml
+# Paused | https://example.com/feed.xml
+```
+
+- **Add a feed** — add a line. Its latest post is announced on the next poll, then every new post after it.
+- **Pause a feed** — start its line with `#` (or remove it). Posts published while it was paused are announced when it's back (up to 5 at once).
 - **Change a feed's URL** — treated as a new feed: only its latest post is announced.
 
 Posted entries are remembered per feed URL in the plugin's KV. A failed Discord post is retried on the next poll; a 429 rate limit ends the poll early and resumes on the next one.
@@ -103,4 +137,4 @@ Posted entries are remembered per feed URL in the plugin's KV. A failed Discord 
 
 1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
 2. In the admin, open the **Feeds** plugin's settings and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
-3. On a site that predates the Feeds collection, create it once in the admin, matching [`seed/seed.json`](seed/seed.json): slug `feeds`, fields `name` (string, required) and `url` (URL, required), with drafts enabled. The seed only applies on first boot.
+3. Fill in **Feeds** and save.
