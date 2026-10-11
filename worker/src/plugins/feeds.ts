@@ -2,9 +2,8 @@ import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
 import { XMLParser } from "fast-xml-parser";
 
-/** Seen IDs kept per feed; well above any feed's page size so old posts never resurface. */
 const SEEN_LIMIT = 500;
-/** Caps a burst (or a feed that re-keys its GUIDs) so it can't flood the channel. */
+// Stops a feed that re-keys its GUIDs from flooding the channel.
 const MAX_NEW_PER_FEED = 5;
 const SUMMARY_LENGTH = 300;
 
@@ -26,7 +25,6 @@ interface FeedItem {
 }
 
 class RateLimited extends Error {}
-/** Discord refused this post itself (e.g. a malformed field); retrying won't help. */
 class Rejected extends Error {}
 
 const list = <T>(value: T | T[] | undefined | null): T[] =>
@@ -62,7 +60,7 @@ const NAMED_ENTITIES: Record<string, string> = {
 	ndash: "\u2013", mdash: "\u2014", hellip: "\u2026",
 };
 
-/** HTML-typed text (Atom `type="html"`, RSS descriptions) is entity-escaped once more than the XML. */
+// HTML-typed feed text is entity-escaped twice, so the XML parser only undoes one level.
 function decodeEntities(value: string): string {
 	return value.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (match, entity: string) => {
 		if (entity[0] !== "#") return NAMED_ENTITIES[entity.toLowerCase()] ?? match;
@@ -89,7 +87,6 @@ function imageOf(entry: Record<string, unknown>): string | undefined {
 	);
 }
 
-/** Parses RSS 2.0, RSS 1.0 (RDF) and Atom into a common shape. */
 function parseFeed(xml: string): { title: string; items: FeedItem[] } {
 	const doc = parser.parse(xml);
 
@@ -157,11 +154,9 @@ async function announce(ctx: PluginContext, webhookUrl: string, feedName: string
 	if (res.status === 429) throw new RateLimited();
 	const detail = await res.text().catch(() => "");
 	const message = `Discord webhook returned ${res.status}: ${detail.slice(0, 200)}`;
-	// 401/403/404 mean the webhook itself is wrong, so every post would fail alike.
 	throw res.status === 400 || res.status === 413 ? new Rejected(message) : new Error(message);
 }
 
-/** One feed per line as `Name | URL` or a bare URL; `#` comments a line out to pause it. */
 function parseFeedList(value: string): { name: string; url: string }[] {
 	return value
 		.split("\n")
@@ -176,11 +171,6 @@ function parseFeedList(value: string): { name: string; url: string }[] {
 		.filter(({ url }) => URL.canParse(url));
 }
 
-/**
- * Announce a feed's unseen posts, oldest first. A feed seen for the first time
- * announces only its latest post. Seen IDs are keyed by feed URL, so changing a
- * feed's URL starts it over as a new feed.
- */
 async function pollFeed(ctx: PluginContext, webhookUrl: string, name: string, url: string) {
 	const res = await ctx.http!.fetch(url, {
 		headers: {
@@ -238,9 +228,8 @@ export function createPlugin() {
 	return definePlugin({
 		id: "feeds",
 		version: "1.0.0",
-		// Feed hosts are whatever admins list in the settings; ctx.http still blocks private targets.
+		// Admins add arbitrary feed hosts; ctx.http still blocks private targets.
 		capabilities: ["network:request:unrestricted"],
-		// Plugin settings need the Admin role, unlike collections, which every Editor can change.
 		admin: {
 			settingsSchema: {
 				feeds: {
@@ -258,7 +247,6 @@ export function createPlugin() {
 			},
 		},
 		routes: {
-			// Private route: invoked every 10 minutes from src/worker.ts, or by an admin.
 			poll: {
 				handler: async (ctx) => {
 					const webhookUrl = await ctx.settings.get<string>("webhookUrl");

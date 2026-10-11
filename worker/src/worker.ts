@@ -34,7 +34,6 @@ export default {
 	},
 	// Every minute: EmDash publishes due scheduled slides, then we unpublish expired ones.
 	// Both paths end in the kiosk plugin's hooks, which dispatch the GitHub rebuild.
-	// Every 10 minutes, the feeds plugin also announces new feed posts to Discord.
 	async scheduled(controller, env, ctx) {
 		await emdashScheduled(controller, env, ctx);
 		runPluginRoute(ctx, "kiosk", "/expire");
