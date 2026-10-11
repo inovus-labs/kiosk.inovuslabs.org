@@ -13,6 +13,14 @@ const kioskPlugin = {
 	entrypoint: fileURLToPath(new URL("./src/plugins/kiosk.ts", import.meta.url)),
 };
 
+// In-repo native plugin: announces new posts from the Feeds collection to Discord (src/plugins/feeds.ts).
+const feedsPlugin = {
+	id: "feeds",
+	version: "1.0.0",
+	format: "native",
+	entrypoint: fileURLToPath(new URL("./src/plugins/feeds.ts", import.meta.url)),
+};
+
 export default defineConfig({
 	output: "server",
 	adapter: cloudflare(),
@@ -21,7 +29,7 @@ export default defineConfig({
 		emdash({
 			database: d1({ binding: "DB" }),
 			storage: r2({ binding: "MEDIA" }),
-			plugins: [kioskPlugin],
+			plugins: [kioskPlugin, feedsPlugin],
 		}),
 	],
 	devToolbar: { enabled: false },
