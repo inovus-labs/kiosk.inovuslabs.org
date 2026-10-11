@@ -91,7 +91,7 @@ New posts reach both automatically; Bluesky follows a few minutes behind.
 
 ## Blog RSS → Discord
 
-Followed blogs are managed on the **Blog RSS → Discord** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every 10 minutes, the same Cron Trigger polls each feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time. Each feed gets its own embed colour when it's added. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
+Followed blogs are managed on the **Blog RSS → Discord** admin page, a table backed by the plugin's own storage. Every signed-in user can view the page, but only Admins can add, edit or remove feeds, enforced on the server. The plugin's settings, which hold the webhook URL, are Admin-only (a content collection would be editable by every Editor). Every hour, the same Cron Trigger polls each feed and posts every new entry to a Discord channel webhook as an embed: the blog's name and icon, the post title and link, a summary, the cover image (or the post's first image), and the author and reading time. Each feed gets its own embed colour when it's added. Posts use the webhook's own name and avatar, set in Discord. RSS 2.0, RSS 1.0 (RDF) and Atom are supported.
 
 ```mermaid
 flowchart TD
@@ -100,7 +100,7 @@ flowchart TD
     F[(Blogs & other<br/>RSS / Atom feeds)]:::source
 
     %% ── Worker ──────────────────────────────────
-    CR[Cron Trigger<br/>every 10 min]:::cf
+    CR[Cron Trigger<br/>hourly]:::cf
     W[Cloudflare Worker<br/>feeds plugin]:::cf
     KV[(Plugin storage<br/>feeds & seen posts)]:::cf
 

@@ -15,7 +15,7 @@ export async function renderPage(ctx: PluginContext, isAdmin: boolean, editing?:
 		{ type: "header", text: "Blog RSS → Discord" },
 		{
 			type: "context",
-			text: "Public blogs we follow by RSS. Their new posts are posted to #rss-feeds on Discord every 10 minutes. A newly added blog posts its latest entry first.",
+			text: "Public blogs we follow by RSS. Their new posts are checked every hour and posted to #rss-feeds on Discord. A newly added blog posts its latest entry first.",
 		},
 	];
 	if (isAdmin && !hasWebhook) {

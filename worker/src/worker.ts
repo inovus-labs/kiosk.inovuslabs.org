@@ -37,7 +37,7 @@ export default {
 	async scheduled(controller, env, ctx) {
 		await emdashScheduled(controller, env, ctx);
 		runPluginRoute(ctx, "kiosk", "/expire");
-		if (new Date(controller.scheduledTime).getUTCMinutes() % 10 === 0) {
+		if (new Date(controller.scheduledTime).getUTCMinutes() === 0) {
 			runPluginRoute(ctx, "feeds", "/poll");
 		}
 	},
