@@ -7,7 +7,7 @@ This directory is an [EmDash](https://emdashcms.com/) site (Astro, server-render
 3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks and fires `repository_dispatch` at this repo.
 4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
 5. **Ghost social web proxy** ([`src/lib/activitypub.ts`](src/lib/activitypub.ts)) — Cloudflare routes send the blog's ActivityPub paths to Ghost's hosted ActivityPub service. See [Ghost social web](#ghost-social-web).
-6. **Feeds plugin** ([`src/plugins/feeds.ts`](src/plugins/feeds.ts)) — announces new posts from an admin-only list of RSS/Atom feeds to a Discord channel. See [Discord feeds](#discord-feeds).
+6. **Feeds plugin** ([`src/plugins/feeds/`](src/plugins/feeds/)) — announces new posts from an admin-only list of RSS/Atom feeds to a Discord channel. See [Discord feeds](#discord-feeds).
 
 The content model lives in [`seed/seed.json`](seed/seed.json) and is applied on first boot; there are no migration files to maintain. To change it on a live site, see [Evolving a deployed site](https://docs.emdashcms.com/deployment/schema-evolution/).
 
@@ -128,8 +128,10 @@ The page shows each feed's status (Active or Failing), when it last announced a 
 
 Posted entries are remembered per feed URL in the plugin's KV. A failed Discord post is retried on the next poll; a 429 rate limit ends the poll early and resumes on the next one.
 
+Feeds are requested with their saved `ETag` / `Last-Modified`, so an unchanged feed answers `304 Not Modified` and is neither downloaded nor parsed. Each feed's favicon is checked once and saved. A typical poll costs one request per feed.
+
 **Setup:**
 
 1. In Discord, open the channel's **Settings → Integrations → Webhooks**, create a webhook, and copy its URL.
 2. In the admin, open the **Feeds** plugin's settings (or **Webhook settings** on the Discord feeds page) and paste it into **Discord webhook URL**. It's stored encrypted with `EMDASH_ENCRYPTION_KEY`.
-3. Add feeds on the **Discord feeds** page. A list saved in the earlier **Feeds** textarea setting is moved into the table automatically (lines starting with `#` are skipped).
+3. Add feeds on the **Discord feeds** page.
