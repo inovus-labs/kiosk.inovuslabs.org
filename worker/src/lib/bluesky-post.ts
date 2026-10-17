@@ -138,13 +138,20 @@ export function buildPost(post: GhostPost, dids: Map<string, string>): PostDraft
 	};
 }
 
+// The blog publishes in English and Malayalam; Bluesky uses `langs` for language filters and translation.
+function language(text: string): string {
+	const malayalam = text.match(/[ഀ-ൿ]/g)?.length ?? 0;
+	const latin = text.match(/[A-Za-z]/g)?.length ?? 0;
+	return malayalam > latin ? "ml" : "en";
+}
+
 /** The `app.bsky.feed.post` record; `thumb` is the blob ref returned by uploadBlob. */
 export function postRecord(post: GhostPost, draft: PostDraft, thumb: unknown, createdAt: string) {
 	return {
 		$type: "app.bsky.feed.post",
 		text: draft.text,
 		facets: draft.facets,
-		langs: ["en"],
+		langs: [language(`${post.title} ${draft.description}`)],
 		embed: {
 			$type: "app.bsky.embed.external",
 			external: { uri: post.url, title: post.title, description: draft.description, ...(thumb ? { thumb } : {}) },
