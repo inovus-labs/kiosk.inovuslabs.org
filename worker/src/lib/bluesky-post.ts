@@ -75,6 +75,18 @@ function truncate(text: string, max: number): string {
 	return `${(atWord.length > cut.length * 0.6 ? atWord : cut).trimEnd()}…`;
 }
 
+// Drops whole trailing sentences rather than cutting one off mid-way.
+function fitSentences(text: string, max: number): string {
+	if (graphemes(text).length <= max) return text;
+	let kept = "";
+	for (const sentence of text.split(/(?<=[.!?।])\s+/)) {
+		const next = kept ? `${kept} ${sentence}` : sentence;
+		if (graphemes(next).length > max) break;
+		kept = next;
+	}
+	return kept || truncate(text, max);
+}
+
 class RichText {
 	text = "";
 	facets: Facet[] = [];
@@ -94,8 +106,12 @@ function list(items: string[]): string[] {
 	return [...items.slice(0, -1).flatMap((item, i) => (i ? [", ", item] : [item])), " & ", items.at(-1)!];
 }
 
-/** `dids` maps each author's normalised Bluesky handle to its DID; authors without one are credited by name. */
-export function buildPost(post: GhostPost, dids: Map<string, string>): PostDraft {
+/**
+ * The post text: an optional `note` (the link card already shows the title, excerpt and date), then the author credit
+ * and hashtags. `dids` maps each author's normalised Bluesky handle to its DID; authors without one are credited by
+ * name.
+ */
+export function buildPost(post: GhostPost, dids: Map<string, string>, note = ""): PostDraft {
 	const summary = (post.custom_excerpt || post.excerpt || "").replace(/\s+/g, " ").trim();
 	const credits = (post.authors ?? []).map((author) => {
 		const handle = blueskyHandle(author.bluesky);
@@ -126,8 +142,8 @@ export function buildPost(post: GhostPost, dids: Map<string, string>): PostDraft
 
 	let tail = footer(true);
 	if (graphemes(tail.text).length > MAX_GRAPHEMES / 2) tail = footer(false);
-	const separator = tail.text ? "\n\n" : "";
-	const body = truncate(summary || post.title, MAX_GRAPHEMES - graphemes(separator + tail.text).length);
+	const body = note.trim() && fitSentences(note.trim(), MAX_GRAPHEMES - graphemes(`\n\n${tail.text}`).length);
+	const separator = body && tail.text ? "\n\n" : "";
 
 	const rich = new RichText().add(body + separator);
 	const offset = byteLength(rich.text);

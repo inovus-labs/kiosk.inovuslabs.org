@@ -9,7 +9,9 @@ import {
 	documentRecord,
 	postPath,
 	type StrongRef,
+	plainText,
 } from "./standard-site";
+import { NOTE_MODEL, NOTE_OPTIONS, cleanNote, noteMessages, noteText } from "./post-note";
 
 const PDS_ORIGIN = "https://pds.inovuslabs.org";
 const PUBLIC_API = "https://public.api.bsky.app";
@@ -39,7 +41,7 @@ async function announce(post: GhostPost) {
 	const existing = await env.BLUESKY.get(key);
 	if (existing) return console.log(`bluesky: post ${post.id} already at ${existing}`);
 
-	const draft = buildPost(post, await resolveAuthors(post.authors ?? []));
+	const draft = buildPost(post, await resolveAuthors(post.authors ?? []), await writeNote(post));
 	const thumb = await loadThumb(post.feature_image);
 	if (env.BLUESKY_DRY_RUN === "true") {
 		const thumbInfo = thumb && { type: thumb.type, bytes: thumb.bytes.byteLength };
@@ -70,6 +72,18 @@ async function announce(post: GhostPost) {
 	);
 	await env.BLUESKY.put(key, uri);
 	console.log(`bluesky: posted ${post.id} as ${uri}`);
+}
+
+// No note is better than a bad one: the post still goes out with its credit, tags and card.
+async function writeNote(post: GhostPost): Promise<string | undefined> {
+	const text = post.plaintext?.trim() || (post.html ? plainText(post.html) : "");
+	if (!text) return;
+	try {
+		const result = await env.AI.run(NOTE_MODEL as keyof AiModels, { messages: noteMessages(post, text), ...NOTE_OPTIONS } as never);
+		return cleanNote(noteText(result));
+	} catch (error) {
+		console.warn(`bluesky: no note for ${post.id}:`, error);
+	}
 }
 
 async function resolveAuthors(authors: GhostAuthor[]): Promise<Map<string, string>> {

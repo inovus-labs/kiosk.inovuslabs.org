@@ -30,6 +30,8 @@
   "services": [{ "binding": "PDS", "service": "pds-inovuslabs" }],
   // Astro adds this binding anyway; src/lib/bluesky.ts also uses it to shrink cover images for Bluesky.
   "images": { "binding": "IMAGES" },
+  // Writes the short note that opens each Bluesky post (src/lib/post-note.ts).
+  "ai": { "binding": "AI" },
   // Every minute: EmDash scheduled publishing + the slide-expiry sweep in src/worker.ts.
   "triggers": { "crons": ["* * * * *"] },
   "observability": {
