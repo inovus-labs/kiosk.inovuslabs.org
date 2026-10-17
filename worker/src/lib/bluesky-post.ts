@@ -179,7 +179,8 @@ export function postRecord(
 		$type: "app.bsky.feed.post",
 		text: draft.text,
 		facets: draft.facets,
-		langs: [language(`${post.title} ${draft.description}`)],
+		// The article's own text where we have it: some Malayalam posts have English excerpts.
+		langs: [language(`${post.title} ${post.plaintext || post.html?.replace(/<[^>]+>/g, " ") || draft.description}`)],
 		embed: {
 			$type: "app.bsky.embed.external",
 			external: {
