@@ -149,7 +149,7 @@ The [`worker/`](worker/) directory is an [EmDash](https://emdashcms.com/) CMS on
 - the slide feed at `/api/slides.json`, read by the build;
 - the Ghost webhook at `/api/webhook/ghost?token=…`, which fires `ghost-publish`.
 
-It also proxies the blog's social web (fediverse and Bluesky) traffic. Local development, deploy, secrets, and the social web setup are in [`worker/README.md`](worker/README.md).
+It also proxies the blog's social web (fediverse) traffic and posts each new blog post to Bluesky as [@inovuslabs.org](https://bsky.app/profile/inovuslabs.org). Local development, deploy, secrets, the social web and Bluesky are in [`worker/README.md`](worker/README.md).
 
 
 ## Display specs
