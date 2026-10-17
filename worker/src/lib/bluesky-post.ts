@@ -140,9 +140,14 @@ export function buildPost(post: GhostPost, dids: Map<string, string>, note = "")
 		return rich;
 	};
 
+	const room = (footerText: string) => MAX_GRAPHEMES - graphemes(`\n\n${footerText}`).length;
+	const firstSentence = note.trim().split(/(?<=[.!?।])\s+/)[0];
 	let tail = footer(true);
-	if (graphemes(tail.text).length > MAX_GRAPHEMES / 2) tail = footer(false);
-	const body = note.trim() && fitSentences(note.trim(), MAX_GRAPHEMES - graphemes(`\n\n${tail.text}`).length);
+	// Hashtags go before the description would have to be cut mid-sentence.
+	if (graphemes(tail.text).length > MAX_GRAPHEMES / 2 || graphemes(firstSentence).length > room(tail.text)) {
+		tail = footer(false);
+	}
+	const body = note.trim() && fitSentences(note.trim(), room(tail.text));
 	const separator = body && tail.text ? "\n\n" : "";
 
 	const rich = new RichText().add(body + separator);
