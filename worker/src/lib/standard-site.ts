@@ -56,3 +56,36 @@ export function publicationRecord(icon: unknown) {
 		},
 	};
 }
+
+// Bluesky estimates reading time from textContent, which must be plain text.
+export function plainText(html: string): string {
+	return html
+		.replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+		.replace(/<[^>]+>/g, " ")
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;|&#x27;/g, "'")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+export function documentRecord(post: GhostPost, coverImage: unknown) {
+	const description = (post.custom_excerpt || post.excerpt || "").replace(/\s+/g, " ").trim();
+	const textContent = post.plaintext?.trim() || (post.html ? plainText(post.html) : "");
+	const tags = (post.tags ?? []).filter((tag) => tag.visibility !== "internal").map((tag) => tag.name);
+	return {
+		$type: DOCUMENT,
+		site: publicationUri,
+		path: postPath(post),
+		title: post.title,
+		publishedAt: new Date(post.published_at!).toISOString(),
+		...(post.updated_at && { updatedAt: new Date(post.updated_at).toISOString() }),
+		...(description && { description }),
+		...(tags.length && { tags }),
+		...(textContent && { textContent }),
+		...(coverImage ? { coverImage } : {}),
+	};
+}

@@ -1,5 +1,15 @@
 import { env, waitUntil } from "cloudflare:workers";
 import { blueskyHandle, buildPost, postRecord, type GhostAuthor, type GhostPost } from "./bluesky-post";
+import {
+	DID,
+	DOCUMENT,
+	PUBLICATION,
+	PUBLICATION_KEY,
+	documentKey,
+	documentRecord,
+	postPath,
+	type StrongRef,
+} from "./standard-site";
 
 const PDS_ORIGIN = "https://pds.inovuslabs.org";
 const PUBLIC_API = "https://public.api.bsky.app";
@@ -38,12 +48,23 @@ async function announce(post: GhostPost) {
 
 	const session = await getSession();
 	const blob = thumb && (await xrpc<{ blob: unknown }>("com.atproto.repo.uploadBlob", thumb.bytes, thumb.type)).blob;
+	// The document comes first: the post's link card points at it and at the publication.
+	const document = await xrpc<StrongRef>(
+		"com.atproto.repo.putRecord",
+		JSON.stringify({
+			repo: session.did,
+			collection: DOCUMENT,
+			rkey: documentKey(post.published_at!, postPath(post)),
+			record: documentRecord(post, blob),
+		}),
+		"application/json",
+	);
 	const { uri } = await xrpc<{ uri: string }>(
 		"com.atproto.repo.createRecord",
 		JSON.stringify({
 			repo: session.did,
 			collection: "app.bsky.feed.post",
-			record: postRecord(post, draft, blob, new Date().toISOString()),
+			record: postRecord(post, draft, blob, new Date().toISOString(), [{ uri: document.uri, cid: document.cid }, await publicationRef()]),
 		}),
 		"application/json",
 	);
@@ -86,6 +107,15 @@ async function loadThumb(url?: string | null): Promise<Thumb | undefined> {
 
 function pds(method: string, init: RequestInit): Promise<Response> {
 	return env.PDS.fetch(`${PDS_ORIGIN}/xrpc/${method}`, init);
+}
+
+// Fetched each time: the publication's CID changes whenever its record is edited.
+async function publicationRef(): Promise<StrongRef> {
+	const query = new URLSearchParams({ repo: DID, collection: PUBLICATION, rkey: PUBLICATION_KEY });
+	const res = await pds(`com.atproto.repo.getRecord?${query}`, { method: "GET" });
+	if (!res.ok) throw new Error(`publication record missing: ${res.status}`);
+	const { uri, cid } = (await res.json()) as StrongRef;
+	return { uri, cid };
 }
 
 async function saveSession(res: Response): Promise<Session> {

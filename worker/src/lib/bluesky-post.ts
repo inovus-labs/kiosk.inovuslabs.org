@@ -17,6 +17,9 @@ export interface GhostPost {
 	status?: string;
 	visibility?: string;
 	published_at?: string | null;
+	updated_at?: string | null;
+	plaintext?: string | null;
+	html?: string | null;
 	custom_excerpt?: string | null;
 	excerpt?: string | null;
 	feature_image?: string | null;
@@ -145,8 +148,17 @@ function language(text: string): string {
 	return malayalam > latin ? "ml" : "en";
 }
 
-/** The `app.bsky.feed.post` record; `thumb` is the blob ref returned by uploadBlob. */
-export function postRecord(post: GhostPost, draft: PostDraft, thumb: unknown, createdAt: string) {
+/**
+ * The `app.bsky.feed.post` record; `thumb` is the blob ref returned by uploadBlob. `associatedRefs` (the post's
+ * Standard.site document and publication) turn the link card into a publication card.
+ */
+export function postRecord(
+	post: GhostPost,
+	draft: PostDraft,
+	thumb: unknown,
+	createdAt: string,
+	associatedRefs: { uri: string; cid: string }[] = [],
+) {
 	return {
 		$type: "app.bsky.feed.post",
 		text: draft.text,
@@ -154,7 +166,13 @@ export function postRecord(post: GhostPost, draft: PostDraft, thumb: unknown, cr
 		langs: [language(`${post.title} ${draft.description}`)],
 		embed: {
 			$type: "app.bsky.embed.external",
-			external: { uri: post.url, title: post.title, description: draft.description, ...(thumb ? { thumb } : {}) },
+			external: {
+				uri: post.url,
+				title: post.title,
+				description: draft.description,
+				...(thumb ? { thumb } : {}),
+				...(associatedRefs.length && { associatedRefs }),
+			},
 		},
 		createdAt,
 	};
