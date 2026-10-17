@@ -17,8 +17,16 @@
     { "binding": "DB", "database_name": "kiosk-db", "database_id": "2d0cac8b-b502-4457-a838-decaa66d731e" },
   ],
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "kiosk-media" }],
-  // Astro sessions (EmDash admin sign-in).
-  "kv_namespaces": [{ "binding": "SESSION", "id": "2ce342b1c4594c95b83ad9b688977343" }],
+  "kv_namespaces": [
+    // Astro sessions (EmDash admin sign-in).
+    { "binding": "SESSION", "id": "2ce342b1c4594c95b83ad9b688977343" },
+    // Bluesky session tokens and Ghost post id -> Bluesky post URI (src/lib/bluesky.ts).
+    { "binding": "BLUESKY", "id": "3119483a09634a5695ba0c643563f778" },
+  ],
+  // Inovus's own PDS (pds.inovuslabs.org), reached directly rather than over the public internet.
+  "services": [{ "binding": "PDS", "service": "pds-inovuslabs" }],
+  // Astro adds this binding anyway; src/lib/bluesky.ts also uses it to shrink cover images for Bluesky.
+  "images": { "binding": "IMAGES" },
   // Every minute: EmDash scheduled publishing + the slide-expiry sweep in src/worker.ts.
   "triggers": { "crons": ["* * * * *"] },
   "observability": {
@@ -33,6 +41,9 @@
     "GHOST_BLOG_HOST": "blog.inovuslabs.org",
     "ACTIVITYPUB_TARGET": "https://ap.ghost.org",
     "SOCIAL_WEB_DOMAIN": "inovuslabs.org",
+    // New Ghost posts are posted to Bluesky as this account; "true" only logs what would be posted.
+    "BLUESKY_HANDLE": "inovuslabs.org",
+    "BLUESKY_DRY_RUN": "true",
   },
-  // Secrets via `wrangler secret put`: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN
+  // Secrets via `wrangler secret put`: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN, BLUESKY_APP_PASSWORD
 }
