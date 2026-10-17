@@ -38,7 +38,7 @@
     "ACTIVITYPUB_TARGET": "https://ap.ghost.org",
     "SOCIAL_WEB_DOMAIN": "inovuslabs.org",
     "BLUESKY_HANDLE": "inovuslabs.org",
-    "BLUESKY_DRY_RUN": "true",
+    "BLUESKY_DRY_RUN": "false",
   },
   // Secrets: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN, BLUESKY_APP_PASSWORD
 }
