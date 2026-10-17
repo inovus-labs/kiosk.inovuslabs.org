@@ -1,5 +1,5 @@
 import { env, waitUntil } from "cloudflare:workers";
-import { blueskyHandle, buildPost, type GhostAuthor, type GhostPost } from "./bluesky-post";
+import { blueskyHandle, buildPost, postRecord, type GhostAuthor, type GhostPost } from "./bluesky-post";
 
 const PDS_ORIGIN = "https://pds.inovuslabs.org";
 const PUBLIC_API = "https://public.api.bsky.app";
@@ -43,17 +43,7 @@ async function announce(post: GhostPost) {
 		JSON.stringify({
 			repo: session.did,
 			collection: "app.bsky.feed.post",
-			record: {
-				$type: "app.bsky.feed.post",
-				text: draft.text,
-				facets: draft.facets,
-				langs: ["en"],
-				embed: {
-					$type: "app.bsky.embed.external",
-					external: { uri: post.url, title: post.title, description: draft.description, ...(blob ? { thumb: blob } : {}) },
-				},
-				createdAt: new Date().toISOString(),
-			},
+			record: postRecord(post, draft, blob, new Date().toISOString()),
 		}),
 		"application/json",
 	);

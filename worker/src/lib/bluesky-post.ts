@@ -16,6 +16,7 @@ export interface GhostPost {
 	url: string;
 	status?: string;
 	visibility?: string;
+	published_at?: string | null;
 	custom_excerpt?: string | null;
 	excerpt?: string | null;
 	feature_image?: string | null;
@@ -134,5 +135,20 @@ export function buildPost(post: GhostPost, dids: Map<string, string>): PostDraft
 			index: { byteStart: f.index.byteStart + offset, byteEnd: f.index.byteEnd + offset },
 		})),
 		description: truncate(summary, MAX_DESCRIPTION),
+	};
+}
+
+/** The `app.bsky.feed.post` record; `thumb` is the blob ref returned by uploadBlob. */
+export function postRecord(post: GhostPost, draft: PostDraft, thumb: unknown, createdAt: string) {
+	return {
+		$type: "app.bsky.feed.post",
+		text: draft.text,
+		facets: draft.facets,
+		langs: ["en"],
+		embed: {
+			$type: "app.bsky.embed.external",
+			external: { uri: post.url, title: post.title, description: draft.description, ...(thumb ? { thumb } : {}) },
+		},
+		createdAt,
 	};
 }
