@@ -1,6 +1,8 @@
 import handler, { createScheduledHandler, PluginBridge } from "@emdash-cms/cloudflare/worker";
 import { withEmDashRuntime } from "emdash/middleware";
 import { proxyActivityPub } from "./lib/activitypub";
+import { linkToPublication, PUBLICATION_WELL_KNOWN } from "./lib/blog-pages";
+import { publicationUri } from "./lib/standard-site";
 
 export { PluginBridge };
 
@@ -39,7 +41,15 @@ export default {
 			return new Response(null, { status: 204 });
 		}
 		if (url.hostname === env.GHOST_BLOG_HOST) {
-			return proxyActivityPub(request, env.ACTIVITYPUB_TARGET);
+			if (/^\/(\.ghost\/activitypub\/|\.well-known\/(webfinger|nodeinfo))/.test(url.pathname)) {
+				return proxyActivityPub(request, env.ACTIVITYPUB_TARGET);
+			}
+			if (url.pathname === PUBLICATION_WELL_KNOWN) {
+				return new Response(publicationUri, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+			}
+			// The rest of the blog: if anything here throws, Cloudflare serves Ghost's page untouched.
+			ctx.passThroughOnException();
+			return linkToPublication(request);
 		}
 		if (url.hostname === env.SOCIAL_WEB_DOMAIN) {
 			return Response.redirect(`https://${env.GHOST_BLOG_HOST}${url.pathname}${url.search}`, 302);

@@ -10,6 +10,9 @@
     { "pattern": "blog.inovuslabs.org/.ghost/activitypub/*", "zone_name": "inovuslabs.org" },
     { "pattern": "blog.inovuslabs.org/.well-known/webfinger*", "zone_name": "inovuslabs.org" },
     { "pattern": "blog.inovuslabs.org/.well-known/nodeinfo*", "zone_name": "inovuslabs.org" },
+    // Every other blog page, for its Standard.site <link> tags (src/lib/blog-pages.ts). Asset, admin and member
+    // paths have Worker-less routes in the dashboard, so they go straight to Ghost.
+    { "pattern": "blog.inovuslabs.org/*", "zone_name": "inovuslabs.org" },
     // Blog's social web handle domain (@blog@inovuslabs.org), redirected to the blog.
     { "pattern": "inovuslabs.org/.well-known/webfinger*", "zone_name": "inovuslabs.org" },
   ],
