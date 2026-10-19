@@ -109,7 +109,7 @@ flowchart TD
     KV[(BLUESKY KV<br/>posted · session)]:::cf
 
     %% ── Bluesky ─────────────────────────────────
-    PDS[pds.inovuslabs.org<br/>@inovuslabs.org]:::bsky
+    PDS["pds.inovuslabs.org<br/>@inovuslabs.org"]:::bsky
     BS[Bluesky]:::bsky
 
     G -->|post.published webhook| W
@@ -117,8 +117,7 @@ flowchart TD
     W <--> KV
     W -->|Document record, then post| PDS
     PDS --> BS
-    V -->|Blog pages| W
-    W -->|Pages with link tags| V
+    V <-->|Blog pages, with link tags| W
 
     classDef user    fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A;
     classDef source  fill:#FEF3C7,stroke:#F59E0B,color:#78350F;
