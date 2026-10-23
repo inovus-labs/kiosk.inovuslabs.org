@@ -1,14 +1,14 @@
-# Kiosk Worker — EmDash CMS, Ghost social web, Bluesky + Blog RSS → Discord
+# Kiosk Worker — EmDash CMS, Ghost social web, Bluesky, LinkedIn + Blog RSS → Discord
 
 This directory is an [EmDash](https://emdashcms.com/) site (Astro, server-rendered) deployed to a Cloudflare Worker at **[kiosk-cms.inovuslabs.org](https://kiosk-cms.inovuslabs.org)**, backed by **D1** (`kiosk-db`), a private **R2** bucket (`kiosk-media`), and a **KV** namespace (`kiosk-sessions`) for admin sessions, all in the Inovus Labs IEDC Cloudflare account and pinned by ID in [`wrangler.jsonc`](wrangler.jsonc). It's part of the [kiosk display](../README.md) and serves seven purposes:
 
 1. **EmDash admin** at `/_emdash/admin` — lab members sign in with a passkey and manage slides in two collections under the **Slides** folder: **Image slides** (a poster) and **Text slides** (headline, body, theme), so each form only shows its own fields. Drafts, revisions, scheduled publishing, and the media library are built in. Leave **Expires at** empty to keep a slide up indefinitely; a lower **Pinned order** shows first (empty = newest first); an empty **Theme** renders as Midnight.
 2. **Slide feed** at `/api/slides.json` — the live slides, already filtered and ordered, read by the GitHub Actions build.
-3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks, fires `repository_dispatch` at this repo, and posts newly published posts to Bluesky.
+3. **Ghost webhook** at `https://kiosk-cms.inovuslabs.org/api/webhook/ghost?token=…` — receives Ghost custom-integration webhooks, fires `repository_dispatch` at this repo, and shares newly published posts on Bluesky and LinkedIn.
 4. **Kiosk plugin** ([`src/plugins/kiosk.ts`](src/plugins/kiosk.ts)) — fires `cms-publish` on slide publish, unpublish, and trash, and unpublishes slides whose `expires_at` has passed. A one-minute Cron Trigger drives both EmDash's scheduled publishing and the expiry sweep, so scheduled and expiring slides reach the kiosk within a minute plus build time.
 5. **Ghost social web proxy** ([`src/lib/activitypub.ts`](src/lib/activitypub.ts)) — Cloudflare routes send the blog's ActivityPub paths to Ghost's hosted ActivityPub service. See [Ghost social web](#ghost-social-web).
 6. **Blog RSS → Discord** ([`src/plugins/feeds/`](src/plugins/feeds/)) — posts new posts from public blogs we follow by RSS/Atom to a Discord channel. See [Blog RSS → Discord](#blog-rss--discord).
-7. **Bluesky** ([`src/lib/bluesky.ts`](src/lib/bluesky.ts)) — posts each new blog post as [@inovuslabs.org](https://bsky.app/profile/inovuslabs.org) and makes the blog a Standard.site publication. See [Bluesky](#bluesky).
+7. **Sharing new posts** ([`src/lib/share/`](src/lib/share/)) — posts each new blog post to Bluesky as [@inovuslabs.org](https://bsky.app/profile/inovuslabs.org) and to the Inovus Labs LinkedIn page, and makes the blog a Standard.site publication. See [Sharing new posts](#sharing-new-posts).
 
 The content model lives in [`seed/seed.json`](seed/seed.json) and is applied on first boot; there are no migration files to maintain. To change it on a live site, see [Evolving a deployed site](https://docs.emdashcms.com/deployment/schema-evolution/).
 
@@ -21,7 +21,7 @@ bunx emdash secrets generate --write .env   # once; also add WEBHOOK_SECRET, GH_
 bun run dev                                  # admin at http://localhost:4321/_emdash/admin
 ```
 
-> Publishing a slide locally fires a real `repository_dispatch` if `.env` holds a valid `GH_TOKEN`. Use a dummy token unless you want a real rebuild. Likewise, keep `BLUESKY_APP_PASSWORD` empty in `.env`, or a local Ghost webhook posts to Bluesky.
+> Publishing a slide locally fires a real `repository_dispatch` if `.env` holds a valid `GH_TOKEN`. Use a dummy token unless you want a real rebuild. Likewise, keep `BLUESKY_APP_PASSWORD` empty in `.env`, or a local Ghost webhook posts to Bluesky. LinkedIn can't post locally: its login lives only in the deployed KV namespace.
 
 **Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that ships the worker. EmDash applies its database migrations and the seed on the first request after a deploy. Open `/_emdash/admin` afterwards to run the setup wizard and register the first admin passkey. Invite other lab members from **Users → Invite** (copy the invite link — no email provider is configured). Configured at the worker level in the Cloudflare dashboard:
 
@@ -39,6 +39,7 @@ bun run dev                                  # admin at http://localhost:4321/_e
 | `WEBHOOK_SECRET` | Random string; same value goes into the Ghost webhook URL as `?token=` |
 | `GH_TOKEN` | GitHub fine-grained PAT scoped to this repo with `Contents: write` |
 | `BLUESKY_APP_PASSWORD` | App password `blog-autopost` for @inovuslabs.org, made with `pnpm pds app-password create` in the [PDS repo](https://github.com/inovus-labs/pds.inovuslabs.org) |
+| `LINKEDIN_CLIENT_SECRET` | Client secret from the **Auth** tab of the LinkedIn developer app whose client ID is `LINKEDIN_CLIENT_ID` |
 
 ## Ghost social web
 
@@ -82,20 +83,18 @@ flowchart TD
 |---|---|
 | Fediverse (Mastodon, Threads, …) | `@blog@inovuslabs.org` |
 | Bluesky | [`@inovuslabs.org`](https://bsky.app/profile/inovuslabs.org), posted by the worker. See [Bluesky](#bluesky) |
+| LinkedIn | The [Inovus Labs](https://www.linkedin.com/company/inovuslabs) page, posted by the worker. See [LinkedIn](#linkedin) |
 
-New posts reach both automatically.
+New posts reach them automatically (LinkedIn once LinkedIn approves the app; see [LinkedIn](#linkedin)).
 
-## Bluesky
+## Sharing new posts
 
-[@inovuslabs.org](https://bsky.app/profile/inovuslabs.org) lives on Inovus's own Bluesky server (PDS) at `pds.inovuslabs.org`, a separate Worker kept in [inovus-labs/pds.inovuslabs.org](https://github.com/inovus-labs/pds.inovuslabs.org). When Ghost first publishes a public post, the webhook answers Ghost and then, in the background:
+When Ghost first publishes a public post, the webhook answers Ghost and then, in the background, shares it on each platform in [`src/lib/share/`](src/lib/share/): [Bluesky](#bluesky) and [LinkedIn](#linkedin). Each platform builds its own post, with its own AI-written text, and publishes it ([`platform.ts`](src/lib/share/platform.ts)); [`index.ts`](src/lib/share/index.ts) runs them independently, so one failing doesn't hold up the other. For a platform with id `name`:
 
-1. writes a `site.standard.document` record for the post (title, excerpt, tags, plain text, cover) to the account;
-2. asks Gemma 4 on Workers AI for a one- or two-sentence description of the article ([`src/lib/post-note.ts`](src/lib/post-note.ts)), and skips it if the model fails;
-3. posts the description, the author credit (an @mention when the author's Ghost profile has a Bluesky handle) and hashtags from the public tags, with a link card that points at the document and the blog's `site.standard.publication` record. Bluesky shows it as a publication card with the cover, reading time and **View publication**.
+- its KV namespace, bound as `NAME`, keeps `post:<Ghost id>` → the shared post's address, plus the platform's own login. Each Ghost post is shared once: republishing doesn't post again, and unpublishing and edits don't change the shared post.
+- `NAME_DRY_RUN` set to `"true"` logs the post it would make instead of posting.
 
-Each Ghost post is posted once: its Bluesky address is kept in the `BLUESKY` KV namespace, which also holds the login session. Republishing doesn't post again; unpublishing and edits don't change the Bluesky post. Failures are only logged.
-
-Bluesky trusts the publication because the blog itself points at the records: the worker serves `/.well-known/site.standard.publication`, and adds `<link rel="site.standard.publication">` to every blog page and `<link rel="site.standard.document">` to each post page as Ghost's HTML passes through ([`src/lib/blog-pages.ts`](src/lib/blog-pages.ts)). Document record keys come from each post's publish date and path, so the tags need no lookup. Blog assets (`/assets`, `/public`, `/content`), `/ghost` and `/members` have Worker-less routes in the Cloudflare dashboard, so they go straight to Ghost.
+The text comes from Gemma 4 on Workers AI ([`ai.ts`](src/lib/share/ai.ts)), with a prompt per platform that keeps to what the article says; if the model fails, the post goes out without it. Failures are only logged.
 
 ```mermaid
 flowchart TD
@@ -106,26 +105,81 @@ flowchart TD
     %% ── Worker ──────────────────────────────────
     W[Cloudflare Worker]:::cf
     AI[Workers AI<br/>Gemma 4]:::cf
-    KV[(BLUESKY KV<br/>posted · session)]:::cf
+    KV[(BLUESKY · LINKEDIN KV<br/>shared posts · logins)]:::cf
 
     %% ── Bluesky ─────────────────────────────────
     PDS["pds.inovuslabs.org<br/>@inovuslabs.org"]:::bsky
     BS[Bluesky]:::bsky
 
+    %% ── LinkedIn ────────────────────────────────
+    LI[LinkedIn API]:::linkedin
+    LP[Inovus Labs<br/>company page]:::linkedin
+
     G -->|post.published webhook| W
-    W -->|Description| AI
+    W -->|Text for each platform| AI
     W <--> KV
     W -->|Document record, then post| PDS
     PDS --> BS
+    W -->|Cover, then post| LI
+    LI --> LP
     V <-->|Blog pages, with link tags| W
 
-    classDef user    fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A;
-    classDef source  fill:#FEF3C7,stroke:#F59E0B,color:#78350F;
-    classDef cf      fill:#FFE4CC,stroke:#F38020,color:#7C2D12;
-    classDef bsky    fill:#E0F2FE,stroke:#0085FF,color:#0C4A6E;
+    classDef user     fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A;
+    classDef source   fill:#FEF3C7,stroke:#F59E0B,color:#78350F;
+    classDef cf       fill:#FFE4CC,stroke:#F38020,color:#7C2D12;
+    classDef bsky     fill:#E0F2FE,stroke:#0085FF,color:#0C4A6E;
+    classDef linkedin fill:#E8F1FB,stroke:#0A66C2,color:#004182;
 ```
 
-`BLUESKY_HANDLE` names the account; set `BLUESKY_DRY_RUN` to `"true"` to log what would be posted instead of posting. The worker reaches the PDS through a service binding (`PDS`) and shrinks large covers to Bluesky's 1 MB limit with the `IMAGES` binding.
+To add a platform, write a file in `src/lib/share/` that exports `{ id, prepare, publish }`, add it to `PLATFORMS` in `index.ts`, and add its KV namespace and `NAME_DRY_RUN` var to [`wrangler.jsonc`](wrangler.jsonc).
+
+### Bluesky
+
+[@inovuslabs.org](https://bsky.app/profile/inovuslabs.org) lives on Inovus's own Bluesky server (PDS) at `pds.inovuslabs.org`, a separate Worker kept in [inovus-labs/pds.inovuslabs.org](https://github.com/inovus-labs/pds.inovuslabs.org). For each new post, the worker ([`src/lib/share/bluesky.ts`](src/lib/share/bluesky.ts)):
+
+1. writes a `site.standard.document` record for the post (title, excerpt, tags, plain text, cover) to the account;
+2. asks Gemma 4 for a one- or two-sentence description of the article;
+3. posts the description, the author credit (an @mention when the author's Ghost profile has a Bluesky handle) and hashtags from the public tags, with a link card that points at the document and the blog's `site.standard.publication` record. Bluesky shows it as a publication card with the cover, reading time and **View publication**.
+
+Bluesky trusts the publication because the blog itself points at the records: the worker serves `/.well-known/site.standard.publication`, and adds `<link rel="site.standard.publication">` to every blog page and `<link rel="site.standard.document">` to each post page as Ghost's HTML passes through ([`src/lib/blog-pages.ts`](src/lib/blog-pages.ts)). Document record keys come from each post's publish date and path, so the tags need no lookup. Blog assets (`/assets`, `/public`, `/content`), `/ghost` and `/members` have Worker-less routes in the Cloudflare dashboard, so they go straight to Ghost.
+
+
+`BLUESKY_HANDLE` names the account, and the `BLUESKY` KV namespace holds its login session. The worker reaches the PDS through a service binding (`PDS`) and shrinks large covers to Bluesky's 1 MB limit with the `IMAGES` binding.
+
+### LinkedIn
+
+Posts go to the [Inovus Labs](https://www.linkedin.com/company/inovuslabs) company page (`LINKEDIN_ORGANIZATION`) through LinkedIn's Community Management API. For each new post, the worker ([`src/lib/share/linkedin.ts`](src/lib/share/linkedin.ts)):
+
+1. asks Gemma 4 for a longer post of 600–1,200 characters: an opening line that earns the click on **see more**, two or three short paragraphs with details from the article, and a closing question or invitation to read;
+2. uploads the cover as the link card's thumbnail, converting WebP covers to JPEG, which LinkedIn needs;
+3. posts the text, the author credit and hashtags from the public tags, with an article card for the post.
+
+Authors whose Ghost profile has a LinkedIn profile are @mentioned. LinkedIn only finds members who follow the page, and only with the restricted `r_organization_followers` permission; anyone it can't find is credited by name.
+
+`LINKEDIN_DRY_RUN` stays `"true"` until LinkedIn approves the app (`LINKEDIN_CLIENT_ID`) for the Community Management API and the page is connected.
+
+**Connecting the page.** The worker posts with a page admin's OAuth token, kept under `token` in the `LINKEDIN` KV namespace. To connect, or to reconnect when the token runs out:
+
+1. Signed in to LinkedIn as a page admin, open this URL (with `LINKEDIN_CLIENT_ID` filled in). Drop `%20r_organization_followers` if LinkedIn hasn't granted it; authors are then credited by name.
+
+   ```text
+   https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=<LINKEDIN_CLIENT_ID>&redirect_uri=https%3A%2F%2Fkiosk-cms.inovuslabs.org%2F&scope=w_organization_social%20r_organization_followers
+   ```
+
+2. Approve. LinkedIn sends you to `kiosk-cms.inovuslabs.org/?code=…`; copy the code from the address bar. It's valid for 30 minutes.
+3. From this directory, trade the code for a token and store it:
+
+   ```bash
+   read -r CODE      # paste the code
+   read -rs SECRET   # paste the client secret (not shown)
+   RES=$(curl -s https://www.linkedin.com/oauth/v2/accessToken -d grant_type=authorization_code \
+     -d code="$CODE" -d redirect_uri=https://kiosk-cms.inovuslabs.org/ \
+     -d client_id=<LINKEDIN_CLIENT_ID> -d client_secret="$SECRET")
+   TOKEN=$(jq -ce 'select(.access_token) | {access_token, refresh_token, expires_at: ((now + .expires_in) * 1000 | floor)}' <<<"$RES") \
+     && bunx wrangler kv key put --binding LINKEDIN --remote token "$TOKEN" || echo "$RES"
+   ```
+
+Access tokens last 60 days. The worker renews them with the refresh token, which lasts a year from connecting (renewing doesn't extend it). If LinkedIn gives the app no refresh token, reconnect every 60 days. Either way, when the logs show `linkedin: … failed` with an expired or missing token, connect again. LinkedIn retires each API version about a year after release, so bump `VERSION` in `linkedin.ts` before then.
 
 ## Blog RSS → Discord
 
