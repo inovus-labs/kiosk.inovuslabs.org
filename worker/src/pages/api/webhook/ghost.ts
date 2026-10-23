@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { announceOnBluesky } from "../../../lib/bluesky";
 import type { GhostPost } from "../../../lib/bluesky-post";
 import { dispatchBuild } from "../../../lib/github";
+import { writeNote } from "../../../lib/post-note";
 
 export const prerender = false;
 
@@ -26,7 +27,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
 	const body = (await request.json().catch(() => ({}))) as GhostWebhook;
 	const published = newlyPublished(body);
-	if (published) announceOnBluesky(published);
+	if (published) announceOnBluesky(published, writeNote(published));
 
 	const res = await dispatchBuild(env.GHOST_DISPATCH_EVENT_TYPE, {
 		ghost_event: request.headers.get("X-Ghost-Event") || "unknown",
