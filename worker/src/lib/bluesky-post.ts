@@ -3,6 +3,7 @@
 export interface GhostAuthor {
 	name: string;
 	bluesky?: string | null;
+	linkedin?: string | null;
 }
 
 export interface GhostTag {
@@ -67,7 +68,7 @@ export function hashtag(name: string): string | undefined {
 	return tag && !/^\d+$/.test(tag) && tag.length <= 64 ? tag : undefined;
 }
 
-function truncate(text: string, max: number): string {
+export function truncate(text: string, max: number): string {
 	const chars = graphemes(text);
 	if (chars.length <= max) return text;
 	const cut = chars.slice(0, max - 1).join("");

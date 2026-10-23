@@ -20,6 +20,7 @@
   "kv_namespaces": [
     { "binding": "SESSION", "id": "2ce342b1c4594c95b83ad9b688977343" },
     { "binding": "BLUESKY", "id": "3119483a09634a5695ba0c643563f778" },
+    { "binding": "LINKEDIN", "id": "9a853c9e4ebd4942a509faeebb300bb9" },
   ],
   "services": [{ "binding": "PDS", "service": "pds-inovuslabs" }],
   // Also used by Astro's image service, which adds it anyway.
@@ -39,6 +40,9 @@
     "SOCIAL_WEB_DOMAIN": "inovuslabs.org",
     "BLUESKY_HANDLE": "inovuslabs.org",
     "BLUESKY_DRY_RUN": "false",
+    "LINKEDIN_CLIENT_ID": "77h8m4x2e39agl",
+    "LINKEDIN_ORGANIZATION": "14411152",
+    "LINKEDIN_DRY_RUN": "true",
   },
-  // Secrets: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN, BLUESKY_APP_PASSWORD
+  // Secrets: EMDASH_ENCRYPTION_KEY, WEBHOOK_SECRET, GH_TOKEN, BLUESKY_APP_PASSWORD, LINKEDIN_CLIENT_SECRET
 }
