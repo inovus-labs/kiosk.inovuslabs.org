@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
-import { write } from "./ai";
-import { PROMPT } from "./bluesky";
+import { write, type Prompt } from "./ai";
 import {
 	excerpt,
+	graphemes,
 	hashtags,
 	list,
 	loadCover,
@@ -20,10 +20,31 @@ const VERSION = "202610";
 const TOKEN_KEY = "token";
 const MAX_TAGS = 3;
 const MAX_DESCRIPTION = 300;
+// LinkedIn allows 3,000 characters; this leaves room for the credit and hashtags.
+const TEXT_MAX_GRAPHEMES = 2000;
 // The Images API takes no WebP; bigger covers are scaled down rather than uploaded whole.
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
 const THUMB_MAX_BYTES = 1_000_000;
 const DAY = 86_400_000;
+
+const SYSTEM = `You write LinkedIn posts for the company page of Inovus Labs, a student innovation community in Kerala, to share articles from its blog, Inovus Blogs.
+Below the post, LinkedIn shows a link card with the article's title and cover image, and the post ends with the author credit and hashtags, so leave all of those out.
+Write a post that makes people stop scrolling and want to read the article:
+- Open with one strong line built on a striking detail, question or tension from the article. LinkedIn shows only the first two lines before "see more", so they must earn the click.
+- Follow with two or three short paragraphs on what the article explores and what the reader takes away, with concrete details from it: a finding, a method, a number, an example or an argument.
+- End with a short line that invites people to read it or to share their own view.
+- Between 600 and 1,200 characters in all, short paragraphs separated by a blank line.
+Rules:
+- Ground everything in what the article says. Never invent facts, numbers, quotes or experiences.
+- Speak as the page sharing someone's article, not as its author.
+- Warm, clear and human, matching the article's tone; be careful with serious subjects. No clickbait, hype or buzzwords such as "game-changer", "revolutionary", "unlock" or "in today's fast-paced world", and no empty praise such as "a must-read".
+- Don't open with "Excited to share", "Explore", "Discover", "Dive into" or "This article".
+- Plain text only: no markdown, bold, headings or bullet symbols. At most two emoji, and only where they fit naturally.
+- No hashtags, @mentions or links.
+- Write in the same language as the article.
+Output only the post.`;
+
+export const PROMPT: Prompt = { system: SYSTEM, articleChars: 8000, maxTokens: 1200, clean: cleanText };
 
 interface Draft {
 	commentary: string;
@@ -75,6 +96,29 @@ export const linkedin: Platform<Draft> = {
 		return urn;
 	},
 };
+
+// Strips what the prompt forbids and keeps its paragraphs; undefined when nothing usable is left.
+function cleanText(raw: string): string | undefined {
+	const paragraphs = raw
+		.replace(/https?:\/\/\S+/g, "")
+		// The credit and hashtags come after the text; a line of the model's own hashtags goes. Inline # and @ are
+		// escaped later and show as typed.
+		.replace(/^\s*(#[\p{L}\p{N}_]+\s*)+$/gmu, "")
+		// Gemma now and then slips a Chinese or Japanese word into Malayalam text.
+		.replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu, "")
+		.replace(/\*\*|__|^#+\s+|^\s*[-*•]\s+/gm, "")
+		.split(/\n\s*\n/)
+		.map((p) => p.replace(/\s+/g, " ").trim())
+		.filter(Boolean);
+	// Too long: keep whole paragraphs that fit.
+	let text = "";
+	for (const paragraph of paragraphs) {
+		const next = text ? `${text}\n\n${paragraph}` : paragraph;
+		if (graphemes(next).length > TEXT_MAX_GRAPHEMES) break;
+		text = next;
+	}
+	return text || undefined;
+}
 
 // Characters that mean something in LinkedIn's "little" text format must be escaped to show as typed.
 const escape = (text: string) => text.replace(/[|{}@[\]()<>#\\*_~]/g, "\\$&");
