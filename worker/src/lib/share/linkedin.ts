@@ -1,5 +1,17 @@
-import { env, waitUntil } from "cloudflare:workers";
-import { hashtag, truncate, type GhostAuthor, type GhostPost } from "./bluesky-post";
+import { env } from "cloudflare:workers";
+import { write } from "./ai";
+import { PROMPT } from "./bluesky";
+import {
+	excerpt,
+	hashtags,
+	list,
+	loadCover,
+	truncate,
+	type Cover,
+	type GhostAuthor,
+	type GhostPost,
+	type Platform,
+} from "./platform";
 
 const API = "https://api.linkedin.com/rest";
 const TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
@@ -8,8 +20,16 @@ const VERSION = "202610";
 const TOKEN_KEY = "token";
 const MAX_TAGS = 3;
 const MAX_DESCRIPTION = 300;
-const THUMB_WIDTH = 1200;
+// The Images API takes no WebP; bigger covers are scaled down rather than uploaded whole.
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
+const THUMB_MAX_BYTES = 1_000_000;
 const DAY = 86_400_000;
+
+interface Draft {
+	commentary: string;
+	description: string;
+	thumb?: Cover;
+}
 
 interface Token {
 	access_token: string;
@@ -17,49 +37,44 @@ interface Token {
 	refresh_token?: string;
 }
 
-/** Post a newly published Ghost post to the LinkedIn page after the response; failures are only logged. */
-export function announceOnLinkedIn(post: GhostPost, note: Promise<string | undefined>) {
-	waitUntil(announce(post, note).catch((error) => console.error(`linkedin: post ${post.id} failed:`, error)));
-}
+/** Posts on the Inovus Labs company page, as an article card with the cover as its thumbnail. */
+export const linkedin: Platform<Draft> = {
+	id: "linkedin",
 
-async function announce(post: GhostPost, note: Promise<string | undefined>) {
-	const key = `post:${post.id}`;
-	const existing = await env.LINKEDIN.get(key);
-	if (existing) return console.log(`linkedin: post ${post.id} already at ${existing}`);
+	async prepare(post) {
+		// Mentions need the app to be authorized; until then a dry run credits every author by name.
+		const token = await accessToken().catch(() => undefined);
+		const [text, people, thumb] = await Promise.all([
+			write(post, PROMPT),
+			token ? resolvePeople(token, post.authors ?? []) : new Map<string, string>(),
+			loadCover(post.feature_image, { accept: (type) => IMAGE_TYPES.includes(type), maxBytes: THUMB_MAX_BYTES }),
+		]);
+		return { commentary: commentary(post, people, text), description: truncate(excerpt(post), MAX_DESCRIPTION), thumb };
+	},
 
-	const dryRun = env.LINKEDIN_DRY_RUN === "true";
-	// A dry run still looks up mentions when the app is authorized, but needs nothing else.
-	const token = dryRun ? await accessToken().catch(() => undefined) : await accessToken();
-	const people = token ? await resolvePeople(token, post.authors ?? []) : new Map<string, string>();
-	const text = commentary(post, people, await note);
-	const description = truncate((post.custom_excerpt || post.excerpt || "").replace(/\s+/g, " ").trim(), MAX_DESCRIPTION);
-	const thumb = await loadThumb(post.feature_image);
-	if (dryRun || !token) {
-		const thumbInfo = thumb && { bytes: thumb.byteLength };
-		return console.log("linkedin: dry run", JSON.stringify({ post: post.id, commentary: text, description, thumb: thumbInfo }));
-	}
-
-	const res = await api(token, "/posts", {
-		author: organization(),
-		commentary: text,
-		visibility: "PUBLIC",
-		distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
-		content: {
-			article: {
-				source: post.url,
-				title: post.title,
-				...(description && { description }),
-				...(thumb && { thumbnail: await uploadImage(token, thumb) }),
+	async publish(post, draft) {
+		const token = await accessToken();
+		const res = await api(token, "/posts", {
+			author: organization(),
+			commentary: draft.commentary,
+			visibility: "PUBLIC",
+			distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+			content: {
+				article: {
+					source: post.url,
+					title: post.title,
+					...(draft.description && { description: draft.description }),
+					...(draft.thumb && { thumbnail: await uploadImage(token, draft.thumb.bytes) }),
+				},
 			},
-		},
-		lifecycleState: "PUBLISHED",
-		isReshareDisabledByAuthor: false,
-	});
-	const urn = res.headers.get("x-restli-id");
-	if (!urn) throw new Error("post created without an id");
-	await env.LINKEDIN.put(key, urn);
-	console.log(`linkedin: posted ${post.id} as https://www.linkedin.com/feed/update/${urn}/`);
-}
+			lifecycleState: "PUBLISHED",
+			isReshareDisabledByAuthor: false,
+		});
+		const urn = res.headers.get("x-restli-id");
+		if (!urn) throw new Error("post created without an id");
+		return urn;
+	},
+};
 
 // Characters that mean something in LinkedIn's "little" text format must be escaped to show as typed.
 const escape = (text: string) => text.replace(/[|{}@[\]()<>#\\*_~]/g, "\\$&");
@@ -95,40 +110,23 @@ async function resolvePeople(token: string, authors: GhostAuthor[]): Promise<Map
 }
 
 /**
- * The description, the author credit and hashtags from the public tags. `people` maps each author's LinkedIn vanity
- * name to its person URN; authors without one are credited by name. LinkedIn allows 3,000 characters.
+ * The AI-written text, the author credit and hashtags from the public tags. `people` maps each author's LinkedIn
+ * vanity name to its person URN; authors without one are credited by name.
  */
-export function commentary(post: GhostPost, people: Map<string, string>, note = ""): string {
+export function commentary(post: GhostPost, people: Map<string, string>, text = ""): string {
 	const names = (post.authors ?? []).map((author) => {
 		const vanity = linkedinVanity(author.linkedin);
 		const urn = vanity && people.get(vanity);
 		return urn ? `@[${escape(author.name)}](${urn})` : escape(author.name);
 	});
-	const credit = names.length > 1 ? `${names.slice(0, -1).join(", ")} & ${names.at(-1)}` : names[0];
-	const tags = [...new Set((post.tags ?? []).filter((t) => t.visibility !== "internal").map((t) => hashtag(t.name)))]
-		.filter((t): t is string => !!t)
-		.slice(0, MAX_TAGS);
-	return [escape(note.trim()), credit && `✍️ by ${credit}`, tags.map((t) => `#${t}`).join(" ")]
+	const credit = list(names).join("");
+	const tags = hashtags(post, MAX_TAGS);
+	return [escape(text.trim()), credit && `✍️ by ${credit}`, tags.map((t) => `#${t}`).join(" ")]
 		.filter(Boolean)
 		.join("\n\n");
 }
 
 const organization = () => `urn:li:organization:${env.LINKEDIN_ORGANIZATION}`;
-
-// LinkedIn takes JPEG, PNG and GIF but not WebP, so every cover is re-encoded as a JPEG.
-async function loadThumb(url?: string | null): Promise<ArrayBuffer | undefined> {
-	if (!url) return;
-	try {
-		const res = await fetch(url);
-		if (!res.ok || !res.body) return;
-		const output = await env.IMAGES.input(res.body)
-			.transform({ width: THUMB_WIDTH, fit: "scale-down" })
-			.output({ format: "image/jpeg", quality: 85 });
-		return await output.response().arrayBuffer();
-	} catch (error) {
-		console.warn(`linkedin: no thumbnail for ${url}:`, error);
-	}
-}
 
 async function uploadImage(token: string, bytes: ArrayBuffer): Promise<string> {
 	const res = await api(token, "/images?action=initializeUpload", { initializeUploadRequest: { owner: organization() } });

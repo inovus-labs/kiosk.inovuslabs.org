@@ -1,6 +1,6 @@
 // Standard.site records that make blog.inovuslabs.org a publication on Bluesky: one publication record, and one
 // document per post. No Worker imports, so the backfill script can use it too.
-import type { GhostPost } from "./bluesky-post";
+import type { GhostPost } from "./share/platform";
 
 export const BLOG_URL = "https://blog.inovuslabs.org";
 export const DID = "did:plc:2fftr5c2q5za7tbw5fmoowjt";

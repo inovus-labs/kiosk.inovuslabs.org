@@ -1,10 +1,8 @@
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
-import { announceOnBluesky } from "../../../lib/bluesky";
-import type { GhostPost } from "../../../lib/bluesky-post";
 import { dispatchBuild } from "../../../lib/github";
-import { announceOnLinkedIn } from "../../../lib/linkedin";
-import { writeNote } from "../../../lib/post-note";
+import { sharePost } from "../../../lib/share";
+import type { GhostPost } from "../../../lib/share/platform";
 
 export const prerender = false;
 
@@ -20,7 +18,7 @@ function newlyPublished(body: GhostWebhook): GhostPost | undefined {
 	return current;
 }
 
-// Ghost custom-integration webhook (post.published / post.unpublished) -> kiosk rebuild, Bluesky and LinkedIn posts.
+// Ghost custom-integration webhook (post.published / post.unpublished) -> kiosk rebuild and social posts.
 export const POST: APIRoute = async ({ request, url }) => {
 	if (!env.WEBHOOK_SECRET || url.searchParams.get("token") !== env.WEBHOOK_SECRET) {
 		return new Response("forbidden", { status: 403 });
@@ -28,12 +26,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
 	const body = (await request.json().catch(() => ({}))) as GhostWebhook;
 	const published = newlyPublished(body);
-	if (published) {
-		// One description for both networks.
-		const note = writeNote(published);
-		announceOnBluesky(published, note);
-		announceOnLinkedIn(published, note);
-	}
+	if (published) sharePost(published);
 
 	const res = await dispatchBuild(env.GHOST_DISPATCH_EVENT_TYPE, {
 		ghost_event: request.headers.get("X-Ghost-Event") || "unknown",
