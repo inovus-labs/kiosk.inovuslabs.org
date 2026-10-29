@@ -107,7 +107,7 @@ function cleanText(raw: string): string | undefined {
 		// Gemma sometimes slips CJK words into Malayalam.
 		.replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu, "")
 		.replace(/\*\*|__|^#+\s+|^\s*[-*•]\s+/gm, "")
-		.split(/\n\s*\n/)
+		.split(/\n+/)
 		.map((p) => p.replace(/\s+/g, " ").trim())
 		.filter(Boolean);
 	let text = "";
