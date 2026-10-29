@@ -21,7 +21,7 @@ bunx emdash secrets generate --write .env   # once; also add WEBHOOK_SECRET, GH_
 bun run dev                                  # admin at http://localhost:4321/_emdash/admin
 ```
 
-> Publishing a slide locally fires a real `repository_dispatch` if `.env` holds a valid `GH_TOKEN`. Use a dummy token unless you want a real rebuild. Likewise, keep `BLUESKY_APP_PASSWORD` empty in `.env`, or a local Ghost webhook posts to Bluesky. LinkedIn can't post locally: its login lives only in the deployed KV namespace.
+> Publishing a slide locally fires a real `repository_dispatch` if `.env` holds a valid `GH_TOKEN`. Use a dummy token unless you want a real rebuild. Likewise, keep `BLUESKY_APP_PASSWORD` empty in `.env`, or a local Ghost webhook posts to Bluesky.
 
 **Deploy** is automated via **Cloudflare Workers Builds** — pushing to `master` triggers a build that ships the worker. EmDash applies its database migrations and the seed on the first request after a deploy. Open `/_emdash/admin` afterwards to run the setup wizard and register the first admin passkey. Invite other lab members from **Users → Invite** (copy the invite link — no email provider is configured). Configured at the worker level in the Cloudflare dashboard:
 
@@ -39,7 +39,7 @@ bun run dev                                  # admin at http://localhost:4321/_e
 | `WEBHOOK_SECRET` | Random string; same value goes into the Ghost webhook URL as `?token=` |
 | `GH_TOKEN` | GitHub fine-grained PAT scoped to this repo with `Contents: write` |
 | `BLUESKY_APP_PASSWORD` | App password `blog-autopost` for @inovuslabs.org, made with `pnpm pds app-password create` in the [PDS repo](https://github.com/inovus-labs/pds.inovuslabs.org) |
-| `LINKEDIN_CLIENT_SECRET` | Client secret from the **Auth** tab of the LinkedIn developer app whose client ID is `LINKEDIN_CLIENT_ID` |
+| `LINKEDIN_CLIENT_SECRET` | Client secret of the LinkedIn app |
 
 ## Ghost social web
 
@@ -85,7 +85,7 @@ flowchart TD
 | Bluesky | [`@inovuslabs.org`](https://bsky.app/profile/inovuslabs.org), posted by the worker. See [Bluesky](#bluesky) |
 | LinkedIn | The [Inovus Labs](https://www.linkedin.com/company/inovuslabs) page, posted by the worker. See [LinkedIn](#linkedin) |
 
-New posts reach them automatically (LinkedIn once LinkedIn approves the app; see [LinkedIn](#linkedin)).
+New posts reach them automatically.
 
 ## Sharing new posts
 
@@ -131,8 +131,6 @@ flowchart TD
     classDef linkedin fill:#E8F1FB,stroke:#0A66C2,color:#004182;
 ```
 
-To add a platform, write a file in `src/lib/share/` that exports `{ id, prepare, publish }`, add it to `PLATFORMS` in `index.ts`, and add its KV namespace and `NAME_DRY_RUN` var to [`wrangler.jsonc`](wrangler.jsonc).
-
 ### Bluesky
 
 [@inovuslabs.org](https://bsky.app/profile/inovuslabs.org) lives on Inovus's own Bluesky server (PDS) at `pds.inovuslabs.org`, a separate Worker kept in [inovus-labs/pds.inovuslabs.org](https://github.com/inovus-labs/pds.inovuslabs.org). For each new post, the worker ([`src/lib/share/bluesky.ts`](src/lib/share/bluesky.ts)):
@@ -154,32 +152,9 @@ Posts go to the [Inovus Labs](https://www.linkedin.com/company/inovuslabs) compa
 2. uploads the cover as the link card's thumbnail, converting WebP covers to JPEG, which LinkedIn needs;
 3. posts the text, the author credit and hashtags from the public tags, with an article card for the post.
 
-Authors whose Ghost profile has a LinkedIn profile are @mentioned. LinkedIn only finds members who follow the page, and only with the restricted `r_organization_followers` permission; anyone it can't find is credited by name.
+Authors whose Ghost profile has a LinkedIn profile are @mentioned, under the name LinkedIn has for them, since a mention only links when the text matches that name. LinkedIn only finds members who follow the page, and only with the restricted `r_organization_followers` permission; anyone it can't find is credited by name.
 
-`LINKEDIN_DRY_RUN` stays `"true"` until LinkedIn approves the app (`LINKEDIN_CLIENT_ID`) for the Community Management API and the page is connected.
-
-**Connecting the page.** The worker posts with a page admin's OAuth token, kept under `token` in the `LINKEDIN` KV namespace. To connect, or to reconnect when the token runs out:
-
-1. Signed in to LinkedIn as a page admin, open this URL (with `LINKEDIN_CLIENT_ID` filled in). Drop `%20r_organization_followers` if LinkedIn hasn't granted it; authors are then credited by name.
-
-   ```text
-   https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=<LINKEDIN_CLIENT_ID>&redirect_uri=https%3A%2F%2Fkiosk-cms.inovuslabs.org%2F&scope=w_organization_social%20r_organization_followers
-   ```
-
-2. Approve. LinkedIn sends you to `kiosk-cms.inovuslabs.org/?code=…`; copy the code from the address bar. It's valid for 30 minutes.
-3. From this directory, trade the code for a token and store it:
-
-   ```bash
-   read -r CODE      # paste the code
-   read -rs SECRET   # paste the client secret (not shown)
-   RES=$(curl -s https://www.linkedin.com/oauth/v2/accessToken -d grant_type=authorization_code \
-     -d code="$CODE" -d redirect_uri=https://kiosk-cms.inovuslabs.org/ \
-     -d client_id=<LINKEDIN_CLIENT_ID> -d client_secret="$SECRET")
-   TOKEN=$(jq -ce 'select(.access_token) | {access_token, refresh_token, expires_at: ((now + .expires_in) * 1000 | floor)}' <<<"$RES") \
-     && bunx wrangler kv key put --binding LINKEDIN --remote token "$TOKEN" || echo "$RES"
-   ```
-
-Access tokens last 60 days. The worker renews them with the refresh token, which lasts a year from connecting (renewing doesn't extend it). If LinkedIn gives the app no refresh token, reconnect every 60 days. Either way, when the logs show `linkedin: … failed` with an expired or missing token, connect again. LinkedIn retires each API version about a year after release, so bump `VERSION` in `linkedin.ts` before then.
+The worker posts with a page admin's OAuth token, kept under `token` in the `LINKEDIN` KV namespace and renewed with its refresh token, which lasts a year from connecting.
 
 ## Blog RSS → Discord
 
