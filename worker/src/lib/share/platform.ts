@@ -28,16 +28,10 @@ export interface GhostPost {
 	tags?: GhostTag[];
 }
 
-/**
- * A network new blog posts are shared to. A platform with id `name` has a KV namespace bound as `NAME`, holding
- * `post:<Ghost id>` → the shared post's address (so each post goes out once) and the platform's own login, and a
- * `NAME_DRY_RUN` var: "true" logs each draft instead of publishing it.
- */
+// Platform `name` uses KV binding `NAME` (`post:<Ghost id>` → address, plus its login) and var `NAME_DRY_RUN`.
 export interface Platform<Draft extends object = object> {
 	id: string;
-	/** Builds the post, including its AI-written text, without publishing anything. */
 	prepare(post: GhostPost): Promise<Draft>;
-	/** Publishes the draft and returns the new post's address. */
 	publish(post: GhostPost, draft: Draft): Promise<string>;
 }
 
@@ -70,23 +64,17 @@ export function hashtag(name: string): string | undefined {
 	return tag && !/^\d+$/.test(tag) && tag.length <= 64 ? tag : undefined;
 }
 
-/** Hashtags (without `#`) from the post's public tags. */
 export function hashtags(post: GhostPost, max: number): string[] {
 	return [...new Set((post.tags ?? []).filter((t) => t.visibility !== "internal").map((t) => hashtag(t.name)))]
 		.filter((t): t is string => !!t)
 		.slice(0, max);
 }
 
-/** `["A", "B", "C"]` → `["A", ", ", "B", " & ", "C"]`, kept apart so mentions can be marked up piece by piece. */
 export function list(items: string[]): string[] {
 	if (items.length < 2) return items;
 	return [...items.slice(0, -1).flatMap((item, i) => (i ? [", ", item] : [item])), " & ", items.at(-1)!];
 }
 
-/**
- * The post's cover as it is when `accept` takes its type and it fits in `maxBytes`; otherwise scaled down to a JPEG,
- * or nothing when even that doesn't fit.
- */
 export async function loadCover(
 	url: string | null | undefined,
 	{ accept = (type: string) => type.startsWith("image/"), maxBytes = Infinity } = {},

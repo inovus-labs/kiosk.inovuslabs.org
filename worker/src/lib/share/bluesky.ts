@@ -68,7 +68,6 @@ interface Session {
 	refreshJwt: string;
 }
 
-/** Posts as @inovuslabs.org, with a publication card that points at the post's Standard.site document. */
 export const bluesky: Platform<Draft> = {
 	id: "bluesky",
 

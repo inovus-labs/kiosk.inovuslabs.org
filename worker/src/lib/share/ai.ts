@@ -4,13 +4,10 @@ import type { GhostPost } from "./platform";
 
 const MODEL = "@cf/google/gemma-4-26b-a4b-it";
 
-/** A platform's instructions for the model, and the clean-up of what it writes. */
 export interface Prompt {
 	system: string;
-	/** How much of the article the model reads. */
 	articleChars: number;
 	maxTokens: number;
-	/** Strips what the prompt forbids; undefined when nothing usable is left. */
 	clean(raw: string): string | undefined;
 }
 

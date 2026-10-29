@@ -3,10 +3,8 @@ import { bluesky } from "./bluesky";
 import { linkedin } from "./linkedin";
 import type { GhostPost, Platform } from "./platform";
 
-// Each platform has its own draft type.
 const PLATFORMS: Platform<any>[] = [bluesky, linkedin];
 
-/** Shares a newly published Ghost post on every platform after the response; failures are only logged. */
 export function sharePost(post: GhostPost) {
 	for (const platform of PLATFORMS) {
 		waitUntil(share(platform, post).catch((error) => console.error(`${platform.id}: post ${post.id} failed:`, error)));

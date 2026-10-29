@@ -15,14 +15,13 @@ import {
 
 const API = "https://api.linkedin.com/rest";
 const TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
-// LinkedIn sunsets each version a year after release; bump this before then.
+// Retired a year after release.
 const VERSION = "202610";
 const TOKEN_KEY = "token";
 const MAX_TAGS = 3;
 const MAX_DESCRIPTION = 300;
-// LinkedIn allows 3,000 characters; this leaves room for the credit and hashtags.
 const TEXT_MAX_GRAPHEMES = 2000;
-// The Images API takes no WebP; bigger covers are scaled down rather than uploaded whole.
+// No WebP.
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
 const THUMB_MAX_BYTES = 1_000_000;
 const DAY = 86_400_000;
@@ -58,12 +57,10 @@ interface Token {
 	refresh_token?: string;
 }
 
-/** Posts on the Inovus Labs company page, as an article card with the cover as its thumbnail. */
 export const linkedin: Platform<Draft> = {
 	id: "linkedin",
 
 	async prepare(post) {
-		// Mentions need the app to be authorized; until then a dry run credits every author by name.
 		const token = await accessToken().catch(() => undefined);
 		const [text, people, thumb] = await Promise.all([
 			write(post, PROMPT),
@@ -97,20 +94,17 @@ export const linkedin: Platform<Draft> = {
 	},
 };
 
-// Strips what the prompt forbids and keeps its paragraphs; undefined when nothing usable is left.
 function cleanText(raw: string): string | undefined {
 	const paragraphs = raw
 		.replace(/https?:\/\/\S+/g, "")
-		// The credit and hashtags come after the text; a line of the model's own hashtags goes. Inline # and @ are
-		// escaped later and show as typed.
+		// Inline # and @ are escaped later.
 		.replace(/^\s*(#[\p{L}\p{N}_]+\s*)+$/gmu, "")
-		// Gemma now and then slips a Chinese or Japanese word into Malayalam text.
+		// Gemma sometimes slips CJK words into Malayalam.
 		.replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu, "")
 		.replace(/\*\*|__|^#+\s+|^\s*[-*•]\s+/gm, "")
 		.split(/\n\s*\n/)
 		.map((p) => p.replace(/\s+/g, " ").trim())
 		.filter(Boolean);
-	// Too long: keep whole paragraphs that fit.
 	let text = "";
 	for (const paragraph of paragraphs) {
 		const next = text ? `${text}\n\n${paragraph}` : paragraph;
@@ -120,10 +114,10 @@ function cleanText(raw: string): string | undefined {
 	return text || undefined;
 }
 
-// Characters that mean something in LinkedIn's "little" text format must be escaped to show as typed.
+// Reserved in LinkedIn's "little" text format.
 const escape = (text: string) => text.replace(/[|{}@[\]()<>#\\*_~]/g, "\\$&");
 
-/** Ghost keeps the profile's vanity name (`in/` dropped) and pages as `company/…`; links are accepted too. */
+// Ghost drops `in/`; pages are `company/…`.
 export function linkedinVanity(value?: string | null): string | undefined {
 	const vanity = value
 		?.trim()
@@ -134,7 +128,7 @@ export function linkedinVanity(value?: string | null): string | undefined {
 	return vanity && /^[\p{L}\p{N}-]{3,100}$/u.test(vanity) ? vanity : undefined;
 }
 
-// Only members who follow the page can be found, and only with the restricted r_organization_followers permission.
+// Finds page followers only.
 async function resolvePeople(token: string, authors: GhostAuthor[]): Promise<Map<string, string>> {
 	const vanities = [...new Set(authors.map((a) => linkedinVanity(a.linkedin)).filter((v): v is string => !!v))];
 	const resolved = await Promise.all(
@@ -153,10 +147,6 @@ async function resolvePeople(token: string, authors: GhostAuthor[]): Promise<Map
 	return new Map(resolved.filter((entry): entry is [string, string] => !!entry[1]));
 }
 
-/**
- * The AI-written text, the author credit and hashtags from the public tags. `people` maps each author's LinkedIn
- * vanity name to its person URN; authors without one are credited by name.
- */
 export function commentary(post: GhostPost, people: Map<string, string>, text = ""): string {
 	const names = (post.authors ?? []).map((author) => {
 		const vanity = linkedinVanity(author.linkedin);
@@ -196,8 +186,6 @@ async function api(token: string, path: string, body: unknown): Promise<Response
 	return res;
 }
 
-// Access tokens last 60 days and the refresh token a year from the first sign-in; after that a page admin has to
-// authorize the app again (see the README).
 async function accessToken(): Promise<string> {
 	const token = await env.LINKEDIN.get<Token>(TOKEN_KEY, "json");
 	if (!token) throw new Error("not authorized yet");
