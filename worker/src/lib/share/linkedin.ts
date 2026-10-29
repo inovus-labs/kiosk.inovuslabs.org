@@ -168,7 +168,7 @@ async function linkedinName(token: string, urn: string, ghostName: string): Prom
 	const keywords = [...new Set([...pairs, ...words])].filter((k) => k.length >= (k.includes(" ") ? 6 : 3));
 	for (const keyword of keywords) {
 		const query = new URLSearchParams({ q: "organizationFollowers", keywords: keyword, organization: organization() });
-		const res = await fetch(`${API}/peopleTypeahead?${query}`, { headers: headers(token) });
+		const res = await fetch(`${API}/peopleTypeahead?${String(query).replaceAll("+", "%20")}`, { headers: headers(token) });
 		if (!res.ok) continue;
 		const { elements = [] } = (await res.json()) as { elements?: { member: string; firstName?: string; lastName?: string }[] };
 		const person = elements.find((e) => e.member === urn);
