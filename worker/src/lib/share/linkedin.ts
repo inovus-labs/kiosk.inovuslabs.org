@@ -51,6 +51,11 @@ interface Draft {
 	thumb?: Cover;
 }
 
+interface Person {
+	urn: string;
+	name: string;
+}
+
 interface Token {
 	access_token: string;
 	expires_at: number;
@@ -64,7 +69,7 @@ export const linkedin: Platform<Draft> = {
 		const token = await accessToken().catch(() => undefined);
 		const [text, people, thumb] = await Promise.all([
 			write(post, PROMPT),
-			token ? resolvePeople(token, post.authors ?? []) : new Map<string, string>(),
+			token ? resolvePeople(token, post.authors ?? []) : new Map<string, Person>(),
 			loadCover(post.feature_image, { accept: (type) => IMAGE_TYPES.includes(type), maxBytes: THUMB_MAX_BYTES }),
 		]);
 		return { commentary: commentary(post, people, text), description: truncate(excerpt(post), MAX_DESCRIPTION), thumb };
@@ -129,29 +134,53 @@ export function linkedinVanity(value?: string | null): string | undefined {
 }
 
 // Finds page followers only.
-async function resolvePeople(token: string, authors: GhostAuthor[]): Promise<Map<string, string>> {
-	const vanities = [...new Set(authors.map((a) => linkedinVanity(a.linkedin)).filter((v): v is string => !!v))];
+async function resolvePeople(token: string, authors: GhostAuthor[]): Promise<Map<string, Person>> {
 	const resolved = await Promise.all(
-		vanities.map(async (vanity) => {
-			const query = new URLSearchParams({
-				q: "vanityUrlAsOrganization",
-				vanityUrl: `https://www.linkedin.com/in/${vanity}`,
-				organization: organization(),
-			});
-			const res = await fetch(`${API}/vanityUrl?${query}`, { headers: headers(token) });
-			if (!res.ok) console.warn(`linkedin: no mention for ${vanity}: ${res.status} ${(await res.text()).slice(0, 200)}`);
-			const data = res.ok ? ((await res.json()) as { elements?: { member?: string }[] }) : {};
-			return [vanity, data.elements?.[0]?.member] as const;
+		authors.map(async (author) => {
+			const vanity = linkedinVanity(author.linkedin);
+			const urn = vanity && (await findMember(token, vanity));
+			if (!urn) return;
+			return [vanity, { urn, name: (await linkedinName(token, urn, author.name)) ?? author.name }] as const;
 		}),
 	);
-	return new Map(resolved.filter((entry): entry is [string, string] => !!entry[1]));
+	return new Map(resolved.filter((entry) => !!entry));
 }
 
-export function commentary(post: GhostPost, people: Map<string, string>, text = ""): string {
+async function findMember(token: string, vanity: string): Promise<string | undefined> {
+	const query = new URLSearchParams({
+		q: "vanityUrlAsOrganization",
+		vanityUrl: `https://www.linkedin.com/in/${vanity}`,
+		organization: organization(),
+	});
+	const res = await fetch(`${API}/vanityUrl?${query}`, { headers: headers(token) });
+	if (!res.ok) console.warn(`linkedin: no mention for ${vanity}: ${res.status} ${(await res.text()).slice(0, 200)}`);
+	const data = res.ok ? ((await res.json()) as { elements?: { member?: string }[] }) : {};
+	return data.elements?.[0]?.member;
+}
+
+// A mention only links when its text is the LinkedIn name, which can differ from the Ghost one.
+async function linkedinName(token: string, urn: string, ghostName: string): Promise<string | undefined> {
+	const words = ghostName
+		.split(/\s+/)
+		.map((w) => w.replace(/\P{L}/gu, ""))
+		.filter(Boolean);
+	const pairs = words.length > 1 ? [`${words[0]} ${words.at(-1)}`, `${words[0]} ${words[1]}`] : [];
+	const keywords = [...new Set([...pairs, ...words])].filter((k) => k.length >= (k.includes(" ") ? 6 : 3));
+	for (const keyword of keywords) {
+		const query = new URLSearchParams({ q: "organizationFollowers", keywords: keyword, organization: organization() });
+		const res = await fetch(`${API}/peopleTypeahead?${query}`, { headers: headers(token) });
+		if (!res.ok) continue;
+		const { elements = [] } = (await res.json()) as { elements?: { member: string; firstName?: string; lastName?: string }[] };
+		const person = elements.find((e) => e.member === urn);
+		if (person) return `${person.firstName ?? ""} ${person.lastName ?? ""}`.replace(/\s+/g, " ").trim() || undefined;
+	}
+}
+
+export function commentary(post: GhostPost, people: Map<string, Person>, text = ""): string {
 	const names = (post.authors ?? []).map((author) => {
 		const vanity = linkedinVanity(author.linkedin);
-		const urn = vanity && people.get(vanity);
-		return urn ? `@[${escape(author.name)}](${urn})` : escape(author.name);
+		const person = vanity && people.get(vanity);
+		return person ? `@[${escape(person.name)}](${person.urn})` : escape(author.name);
 	});
 	const credit = list(names).join("");
 	const tags = hashtags(post, MAX_TAGS);
